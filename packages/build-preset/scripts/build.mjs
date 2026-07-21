@@ -3,7 +3,7 @@
 // dist/cjs/ that gets renamed to .cjs so the package.json `exports` map can
 // serve both module systems without a bundler.
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,8 +46,9 @@ function walk(dir, base) {
 walk(cjsDir, "");
 rmSync(cjsDir, { recursive: true, force: true });
 
-// 4. Ship the CLI as plain executable JS (shebang already in source, tsc
-// preserves it) — no extra step needed since dist/cli.js is produced by the
-// ESM pass above.
+// 4. Mark the CLI entry executable (tsc preserves the shebang but not the
+// +x bit; npm's bin validation rejects a non-executable bin script at
+// publish time otherwise — silently auto-stripping the `bin` field).
+chmodSync(path.join(dist, "cli.js"), 0o755);
 
 console.log("build-preset: built dist/ (ESM .js + CJS .cjs + .d.ts)");
