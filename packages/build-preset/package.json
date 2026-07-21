@@ -1,0 +1,56 @@
+{
+  "name": "@arcade-cabinet/build-preset",
+  "version": "0.1.0",
+  "description": "Shared Vite/tsconfig/Biome/Capacitor/Vitest build-config conventions for arcade-cabinet fleet games, extracted from little-legends.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "files": [
+    "dist",
+    "tsconfig.base.json",
+    "biome.base.json"
+  ],
+  "exports": {
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js",
+      "require": "./dist/vite.cjs"
+    },
+    "./capacitor": {
+      "types": "./dist/capacitor.d.ts",
+      "import": "./dist/capacitor.js",
+      "require": "./dist/capacitor.cjs"
+    },
+    "./vitest": {
+      "types": "./dist/vitest.d.ts",
+      "import": "./dist/vitest.js",
+      "require": "./dist/vitest.cjs"
+    },
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./biome.base.json": "./biome.base.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "build-preset": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "peerDependencies": {
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3",
+    "vitest": "^4.1.10"
+  }
+}
