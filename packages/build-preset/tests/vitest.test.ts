@@ -58,6 +58,14 @@ describe("defineBrowserTest", () => {
     expect(config.optimizeDeps.include).toEqual(["three", "declarative-hex-worlds"]);
   });
 
+  it("lets non-Three renderers omit the Three dependency", () => {
+    const config = defineBrowserTest({
+      includeThree: false,
+      optimizeDepsInclude: ["pixi.js", "koota"],
+    });
+    expect(config.optimizeDeps.include).toEqual(["pixi.js", "koota"]);
+  });
+
   it("defaults fileParallelism to false (shared browser instance)", () => {
     const config = defineBrowserTest();
     expect(config.browser.fileParallelism).toBe(false);

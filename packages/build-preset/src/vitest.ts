@@ -47,9 +47,13 @@ export interface DefineBrowserTestOptions {
    * throws "Invalid hook call" from inside R3F's own <Canvas> — a real,
    * previously-hit bug (little-legends' vitest.browser.config.ts, hex-board
    * spike) this preset now encodes once instead of every repo rediscovering
-   * it. `three` and `react`-adjacent deps are pre-included by default.
+   * it. React Three Fiber consumers get `three` by default for backward
+   * compatibility; non-Three renderers should set `includeThree: false`.
    */
   optimizeDepsInclude?: string[];
+  /** Pre-bundle `three` for React Three Fiber consumers. Defaults to true for
+   * backward compatibility; Pixi/Canvas/DOM-only games should disable it. */
+  includeThree?: boolean;
   /** Headless override. Defaults to CI-driven (headless in CI, headed locally),
    * with a `VITEST_BROWSER_HEADLESS=false` local escape hatch. */
   headless?: boolean;
@@ -97,6 +101,7 @@ export function defineBrowserTest(options: DefineBrowserTestOptions = {}): {
   const {
     include = ["tests/browser/**/*.{test,spec}.{ts,tsx}"],
     optimizeDepsInclude = [],
+    includeThree = true,
     headless,
     fileParallelism = false,
     extraLaunchArgs = [],
@@ -105,7 +110,7 @@ export function defineBrowserTest(options: DefineBrowserTestOptions = {}): {
   return {
     include,
     optimizeDeps: {
-      include: ["three", ...optimizeDepsInclude],
+      include: [...(includeThree ? ["three"] : []), ...optimizeDepsInclude],
     },
     browser: {
       enabled: true,
