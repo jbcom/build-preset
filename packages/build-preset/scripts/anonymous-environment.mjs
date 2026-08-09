@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const AUTH_ENV_PATTERN = /auth|password|token|gitea/i;
 const AUTH_CONFIG_PATTERN = /(?:auth|password|token)[^=\r\n]*=/i;
+const SAFE_RUNTIME_AUTH_ENVIRONMENT = new Set(["XAUTHORITY"]);
 
 export function assertAnonymousNpmConfig(userConfig) {
   const contents = readFileSync(userConfig, "utf8");
@@ -22,7 +23,12 @@ export function createAnonymousEnvironment({ home, userConfig, baseEnv = process
 
   const environment = {};
   for (const [key, value] of Object.entries(baseEnv)) {
-    if (value === undefined || AUTH_ENV_PATTERN.test(key)) continue;
+    if (
+      value === undefined ||
+      (AUTH_ENV_PATTERN.test(key) && !SAFE_RUNTIME_AUTH_ENVIRONMENT.has(key))
+    ) {
+      continue;
+    }
     if (/^npm_config_/i.test(key)) continue;
     environment[key] = value;
   }

@@ -33,7 +33,7 @@ describe("release boundary", () => {
     expect(source).not.toMatch(/execFileSync\(["']npx["']/);
   });
 
-  it("removes token and auth variables and pins both npm config layers", () => {
+  it("removes package auth variables, preserves X11 authority, and pins npm config", () => {
     const root = mkdtempSync(path.join(tmpdir(), "build-preset-anonymous-env-"));
     const userConfig = path.join(root, "anonymous.npmrc");
     writeFileSync(userConfig, "@arcade-cabinet:registry=https://registry.invalid/npm/\n");
@@ -42,6 +42,8 @@ describe("release boundary", () => {
       userConfig,
       baseEnv: {
         PATH: process.env.PATH,
+        DISPLAY: ":99",
+        XAUTHORITY: "/tmp/xvfb-authority",
         HOME: "/credentialed/home",
         NODE_AUTH_TOKEN: "secret",
         NPM_TOKEN: "secret",
@@ -55,6 +57,8 @@ describe("release boundary", () => {
       },
     });
     expect(environment.PATH).toBe(process.env.PATH);
+    expect(environment.DISPLAY).toBe(":99");
+    expect(environment.XAUTHORITY).toBe("/tmp/xvfb-authority");
     expect(environment.HOME).toBe(path.join(root, "home"));
     expect(environment).not.toHaveProperty("NODE_AUTH_TOKEN");
     expect(environment).not.toHaveProperty("NPM_TOKEN");
@@ -79,6 +83,7 @@ describe("release boundary", () => {
       path.join(repositoryRoot, ".gitea/workflows/publish-build-preset.yml"),
       "utf8",
     );
+    const ci = readFileSync(path.join(repositoryRoot, ".gitea/workflows/ci.yml"), "utf8");
     const release = readFileSync(path.join(repositoryRoot, ".gitea/workflows/release.yml"), "utf8");
     expect(publish).toContain("anonymous-environment.mjs");
     expect(publish).toContain("remoteNames");
@@ -90,6 +95,11 @@ describe("release boundary", () => {
       /BUILD_PRESET_CONSUMER_SOURCE:\s+\$\{\{ steps\.package\.outputs\.version \}\}/,
     );
     expect(publish).not.toMatch(/BUILD_PRESET_CONSUMER_SOURCE:.*outputs\.name.*@/);
+    expect(ci).toContain("Fresh anonymous build-preset headed consumer");
+    expect(ci).toMatch(/BUILD_PRESET_RUN_BROWSER:\s+["']1["']/);
+    expect(ci).toContain(
+      "xvfb-run -a pnpm --filter @arcade-cabinet/build-preset run smoke:tarball",
+    );
     expect(release).toContain("registryArchiveSha");
     expect(release).toContain("release asset set mismatch");
     expect(release).toContain("package version mismatch at tag");
