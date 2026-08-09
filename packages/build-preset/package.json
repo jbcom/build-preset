@@ -1,0 +1,94 @@
+{
+  "name": "@arcade-cabinet/build-preset",
+  "version": "0.2.0",
+  "description": "Shared Vite/tsconfig/Biome/Capacitor/Vitest build-config conventions for arcade-cabinet fleet games, extracted from little-legends.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jbcom/little-legends.git",
+    "directory": "packages/build-preset"
+  },
+  "bugs": {
+    "url": "https://github.com/jbcom/little-legends/issues"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "dist",
+    "tsconfig.base.json",
+    "biome.base.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js",
+      "require": "./dist/vite.cjs"
+    },
+    "./capacitor": {
+      "types": "./dist/capacitor.d.ts",
+      "import": "./dist/capacitor.js",
+      "require": "./dist/capacitor.cjs"
+    },
+    "./vitest": {
+      "types": "./dist/vitest.d.ts",
+      "import": "./dist/vitest.js",
+      "require": "./dist/vitest.cjs"
+    },
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./biome.base.json": "./biome.base.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "build-preset": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "lint": "biome check . --config-path biome.base.json --vcs-enabled=false",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "smoke:tarball": "node scripts/consumer-smoke.mjs",
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm pack --dry-run && pnpm run smoke:tarball"
+  },
+  "peerDependencies": {
+    "@vitest/browser-playwright": "^4.1.10",
+    "playwright": ">=1.62.1 <2",
+    "vitest": "^4.1.10",
+    "vite": "^8.2.1"
+  },
+  "peerDependenciesMeta": {
+    "@vitest/browser-playwright": {
+      "optional": false
+    },
+    "playwright": {
+      "optional": false
+    },
+    "vitest": {
+      "optional": false
+    },
+    "vite": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.7",
+    "@types/node": "24.13.3",
+    "@vitest/browser-playwright": "4.1.10",
+    "playwright": "1.62.1",
+    "typescript": "7.0.2",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}
