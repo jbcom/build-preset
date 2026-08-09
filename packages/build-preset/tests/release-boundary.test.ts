@@ -17,6 +17,14 @@ const packageRoot = path.resolve(import.meta.dirname, "..");
 const repositoryRoot = path.resolve(packageRoot, "../..");
 
 describe("release boundary", () => {
+  it("keeps the source package and release manifest on the same publish version", () => {
+    const packageJson = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8"));
+    const manifest = JSON.parse(
+      readFileSync(path.join(repositoryRoot, ".release-please-manifest.json"), "utf8"),
+    );
+    expect(manifest["packages/build-preset"]).toBe(packageJson.version);
+  });
+
   it("executes the installed TypeScript compiler without npx network fallback", () => {
     const source = readFileSync(path.join(packageRoot, "scripts/build.mjs"), "utf8");
     expect(source).toContain('require.resolve("typescript/package.json")');
