@@ -84,6 +84,8 @@ describe("release boundary", () => {
     expect(publish).toContain("remoteNames");
     expect(publish).toContain("remoteSha !== localSha");
     expect(publish).toContain('cd "$BUILD_PRESET_PACKAGE_DIR"');
+    expect(publish).toContain("/branches/main");
+    expect(publish).not.toContain("git fetch origin main");
     expect(release).toContain("registryArchiveSha");
     expect(release).toContain("release asset set mismatch");
     expect(release).toContain("package version mismatch at tag");
