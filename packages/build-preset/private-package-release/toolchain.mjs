@@ -14,9 +14,10 @@ export async function resolveExactToolchain() {
   const nodeExecutable = await realpath(process.execPath);
   const nodeRoot = path.dirname(path.dirname(nodeExecutable));
   const npmCli = path.join(nodeRoot, "lib/node_modules/npm/bin/npm-cli.js");
+  const corepackCli = path.join(nodeRoot, "lib/node_modules/corepack/dist/corepack.js");
   const pnpmCli = path.join(nodeRoot, "lib/node_modules/corepack/dist/pnpm.js");
-  await Promise.all([access(npmCli), access(pnpmCli)]);
-  return Object.freeze({ nodeExecutable, npmCli, pnpmCli });
+  await Promise.all([access(npmCli), access(corepackCli), access(pnpmCli)]);
+  return Object.freeze({ nodeExecutable, npmCli, corepackCli, pnpmCli });
 }
 
 export async function runExactTool(toolchain, tool, arguments_, options, runCommand = run) {

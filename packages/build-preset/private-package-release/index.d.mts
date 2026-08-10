@@ -1,6 +1,7 @@
 export * from "./anonymous-environment.mjs";
 export * from "./cli.mjs";
 export * from "./config.mjs";
+export * from "./corepack-environment.mjs";
 export * from "./dependency-current.mjs";
 export * from "./fingerprint.mjs";
 export * from "./orchestrator.mjs";

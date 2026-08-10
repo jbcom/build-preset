@@ -14,6 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAnonymousEnvironment } from "./anonymous-environment.mjs";
 import { SBOM_PROFILE } from "./config.mjs";
+import { prepareAnonymousCorepackEnvironment } from "./corepack-environment.mjs";
 import { computeReleaseInput, createGitClient } from "./fingerprint.mjs";
 import { generateAndValidatePnpmPackageSbom } from "./sbom.mjs";
 import { assertCreatedRelease } from "./state.mjs";
@@ -454,10 +455,12 @@ export async function profilePackageAdmission({
   await writeFile(userConfig, `${config.registry.scope}:registry=${config.registry.url}\n`, {
     mode: 0o600,
   });
-  const anonymousEnvironment = createAnonymousEnvironment({
+  const anonymousEnvironment = await prepareAnonymousCorepackEnvironment({
     home: anonymousHome,
     userConfig,
     baseEnv: environment,
+    toolchain,
+    runCommand,
   });
   const trackedFiles = await trackedWorkspaceFiles(root, spec, runCommand);
   const pack = async (destination) => {
@@ -599,6 +602,17 @@ export async function createRuntimeClients({
     userConfig: anonymousConfig,
     baseEnv: environment,
   });
+  let preparedAnonymousEnvironment;
+  const ensurePreparedAnonymousEnvironment = async () => {
+    preparedAnonymousEnvironment ??= prepareAnonymousCorepackEnvironment({
+      home: anonymousHome,
+      userConfig: anonymousConfig,
+      baseEnv: environment,
+      toolchain,
+      runCommand,
+    });
+    return preparedAnonymousEnvironment;
+  };
 
   async function giteaRequest(route, options = {}, { allowNotFound = false } = {}) {
     const response = await fetchImplementation(`${apiRoot}${route}`, {
@@ -684,6 +698,7 @@ export async function createRuntimeClients({
       );
     },
     async pack(packageDirectory, destination) {
+      const buildEnvironment = await ensurePreparedAnonymousEnvironment();
       const resolvedPackage = await packagePath(packageDirectory);
       const spec = config.packages.find((candidate) => candidate.directory === packageDirectory);
       if (!spec) throw new Error(`package directory is not configured: ${packageDirectory}`);
@@ -699,7 +714,7 @@ export async function createRuntimeClients({
         spec,
         toolchain,
         runCommand,
-        environment: anonymousEnvironment,
+        environment: buildEnvironment,
       });
       await mkdir(destination, { recursive: true });
       const before = new Set(await readdir(destination));
@@ -826,6 +841,7 @@ export async function createRuntimeClients({
       });
     },
     async generateSbom(candidate, outputPath, { enforceAdmission = true } = {}) {
+      const preparedEnvironment = await ensurePreparedAnonymousEnvironment();
       const credentialCanary = `PRIVATE_SBOM_CREDENTIAL_CANARY_${randomBytes(16).toString("hex")}`;
       const benignCanary = `ARCADE_SBOM_CANARY_${randomBytes(16).toString("hex")}`;
       const sbomBaseEnvironment = {
@@ -837,6 +853,7 @@ export async function createRuntimeClients({
         home: anonymousHome,
         userConfig: anonymousConfig,
         baseEnv: sbomBaseEnvironment,
+        corepackHome: preparedEnvironment.COREPACK_HOME,
       });
       const evidence = await generateAndValidatePnpmPackageSbom({
         outputPath,

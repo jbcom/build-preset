@@ -7,6 +7,7 @@ export type CommandRunner = (
 export type ExactToolchain = {
   nodeExecutable: string;
   npmCli: string;
+  corepackCli: string;
   pnpmCli: string;
 };
 

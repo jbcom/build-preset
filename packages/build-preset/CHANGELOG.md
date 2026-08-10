@@ -18,6 +18,9 @@ Release Please manifest.
   membership, Gitea origin, create-release responses and annotated-tag
   resolution, npm `latest` publication, script suppression, anonymous evidence
   generation, and packed-consumer coverage for the new API and CLI surfaces.
+- Made anonymous builds and SBOM profiling export the already-selected exact pnpm
+  into a verifier-owned Corepack cache, then execute with Corepack networking and
+  ambient home/config overrides disabled.
 
 ## 0.2.0
 
