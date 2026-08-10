@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -7,6 +8,11 @@ import {
   assertAnonymousNpmConfig,
   createAnonymousEnvironment,
 } from "../private-package-release/anonymous-environment.mjs";
+import {
+  EXACT_PNPM_VERSION,
+  prepareAnonymousCorepackEnvironment,
+} from "../private-package-release/corepack-environment.mjs";
+import { resolveExactToolchain } from "../private-package-release/toolchain.mjs";
 import {
   assertCommitAncestor,
   assertCycloneDxPackageIdentity,
@@ -54,6 +60,11 @@ describe("release boundary", () => {
         npm_config_registry: "https://credentialed.invalid/npm/",
         npm_config_userconfig: "/credentialed/user.npmrc",
         NPM_CONFIG_GLOBALCONFIG: "/credentialed/global.npmrc",
+        COREPACK_HOME: "/credentialed/corepack",
+        COREPACK_NPM_TOKEN: "secret",
+        COREPACK_INTEGRITY_KEYS: "0",
+        XDG_CACHE_HOME: "/credentialed/cache",
+        PNPM_HOME: "/credentialed/pnpm",
       },
     });
     expect(environment.PATH).toBe(process.env.PATH);
@@ -67,8 +78,56 @@ describe("release boundary", () => {
     expect(environment).not.toHaveProperty("GITEA_SERVER_URL");
     expect(environment).not.toHaveProperty("npm_config_//registry.invalid/:_authToken");
     expect(environment).not.toHaveProperty("npm_config_registry");
+    expect(environment).not.toHaveProperty("COREPACK_NPM_TOKEN");
+    expect(environment).not.toHaveProperty("COREPACK_INTEGRITY_KEYS");
+    expect(environment.COREPACK_HOME).toBe(path.join(root, "home/.cache/node/corepack"));
+    expect(environment.COREPACK_ENABLE_NETWORK).toBe("0");
+    expect(environment.COREPACK_ENABLE_DOWNLOAD_PROMPT).toBe("0");
+    expect(environment.COREPACK_ENV_FILE).toBe("0");
+    expect(environment.COREPACK_ENABLE_PROJECT_SPEC).toBe("0");
+    expect(environment.XDG_CACHE_HOME).toBe(path.join(root, "home/.cache"));
+    expect(environment).not.toHaveProperty("PNPM_HOME");
     expect(environment.npm_config_userconfig).toBe(userConfig);
     expect(readFileSync(environment.NPM_CONFIG_GLOBALCONFIG, "utf8")).not.toMatch(/auth|token/i);
+  });
+
+  it("exports exact pnpm into a fresh verifier-owned Corepack cache and runs offline", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "build-preset-corepack-offline-"));
+    const userConfig = path.join(root, "anonymous.npmrc");
+    const home = path.join(root, "anonymous-home");
+    writeFileSync(userConfig, "@arcade-cabinet:registry=https://registry.invalid/npm/\n");
+    const toolchain = await resolveExactToolchain();
+    const unprepared = createAnonymousEnvironment({ home, userConfig });
+    expect(() =>
+      execFileSync(process.execPath, [toolchain.pnpmCli, "--version"], {
+        cwd: repositoryRoot,
+        env: unprepared,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+    ).toThrow();
+
+    const environment = await prepareAnonymousCorepackEnvironment({
+      home,
+      userConfig,
+      toolchain,
+    });
+    expect(environment.HOME).toBe(home);
+    expect(environment.HOME).not.toBe(process.env.HOME);
+    expect(environment.COREPACK_HOME).toBe(path.join(home, ".cache/node/corepack"));
+    expect(environment.COREPACK_ENABLE_NETWORK).toBe("0");
+    expect(
+      execFileSync(process.execPath, [toolchain.pnpmCli, "--version"], {
+        cwd: repositoryRoot,
+        env: environment,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim(),
+    ).toBe(EXACT_PNPM_VERSION);
+    const lastKnownGood = JSON.parse(
+      readFileSync(path.join(environment.COREPACK_HOME, "lastKnownGood.json"), "utf8"),
+    );
+    expect(lastKnownGood).toEqual({ pnpm: EXACT_PNPM_VERSION });
   });
 
   it("rejects authentication material in the claimed anonymous npm config", () => {

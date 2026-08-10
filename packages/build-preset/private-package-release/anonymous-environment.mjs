@@ -17,7 +17,12 @@ export function assertAnonymousNpmConfig(userConfig) {
   }
 }
 
-export function createAnonymousEnvironment({ home, userConfig, baseEnv = process.env }) {
+export function createAnonymousEnvironment({
+  home,
+  userConfig,
+  baseEnv = process.env,
+  corepackHome = path.join(home, ".cache/node/corepack"),
+}) {
   assertAnonymousNpmConfig(userConfig);
   mkdirSync(home, { recursive: true });
   const globalConfig = path.join(home, "empty-global.npmrc");
@@ -29,7 +34,9 @@ export function createAnonymousEnvironment({ home, userConfig, baseEnv = process
       value === undefined ||
       (AUTH_ENV_PATTERN.test(key) && !SAFE_RUNTIME_AUTH_ENVIRONMENT.has(key)) ||
       CI_INTERNAL_ENV_PATTERN.test(key) ||
-      key === "NODE_PATH"
+      key === "NODE_PATH" ||
+      key === "PNPM_HOME" ||
+      /^(?:COREPACK_|XDG_)/iu.test(key)
     ) {
       continue;
     }
@@ -41,6 +48,14 @@ export function createAnonymousEnvironment({ home, userConfig, baseEnv = process
     HOME: home,
     USERPROFILE: home,
     XDG_CONFIG_HOME: path.join(home, ".config"),
+    XDG_CACHE_HOME: path.join(home, ".cache"),
+    XDG_DATA_HOME: path.join(home, ".local/share"),
+    XDG_STATE_HOME: path.join(home, ".local/state"),
+    COREPACK_HOME: corepackHome,
+    COREPACK_ENABLE_NETWORK: "0",
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+    COREPACK_ENV_FILE: "0",
+    COREPACK_ENABLE_PROJECT_SPEC: "0",
     npm_config_userconfig: userConfig,
     NPM_CONFIG_USERCONFIG: userConfig,
     npm_config_globalconfig: globalConfig,

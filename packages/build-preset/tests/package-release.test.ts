@@ -61,7 +61,12 @@ const config = {
     },
   ],
 };
-const toolchain = { nodeExecutable: "/node", npmCli: "/npm", pnpmCli: "/pnpm" };
+const toolchain = {
+  nodeExecutable: "/node",
+  npmCli: "/npm",
+  corepackCli: "/corepack",
+  pnpmCli: "/pnpm",
+};
 const execute = promisify(execFile);
 
 function responseJson(value: unknown, status = 200) {
@@ -148,7 +153,13 @@ function buildRunner(onBuild: () => Promise<void> | void, npmCalls = vi.fn()) {
         encoding: options.encoding === null ? null : "utf8",
       });
     }
+    if (arguments_[0] === toolchain.corepackCli) {
+      return { stdout: "", stderr: "" };
+    }
     if (arguments_[0] === toolchain.pnpmCli) {
+      if (arguments_[1] === "--version") {
+        return { stdout: "11.21.0\n", stderr: "" };
+      }
       await onBuild();
       return { stdout: "", stderr: "" };
     }

@@ -116,6 +116,15 @@ tag-prefix, tag-object, registry-state, and asset-byte drift fail before mutatio
 Release creation also validates Gitea's returned identity, metadata, and exact
 source target before the first asset upload.
 
+The invoking toolchain must have pnpm 11.21.0 prepared in its Corepack cache (the
+repository workflows do this before install). For each release run, the verifier
+exports that exact cached package manager with Corepack networking disabled, imports
+and activates it in a fresh cache beneath the anonymous scratch home, and keeps
+networking disabled for every build and SBOM subprocess. It never forwards the
+caller's `HOME`, XDG cache paths, Corepack overrides, npm configuration, or package
+tokens. A missing prepared pnpm fails before package code runs; prepare the exact
+version once with `corepack install --global pnpm@11.21.0` and retry.
+
 ## Dependency currency
 
 The ESM-only `@arcade-cabinet/build-preset/dependency-current` export and CLI
