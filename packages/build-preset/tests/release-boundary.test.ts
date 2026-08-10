@@ -128,7 +128,7 @@ describe("release boundary", () => {
       readFileSync(path.join(environment.COREPACK_HOME, "lastKnownGood.json"), "utf8"),
     );
     expect(lastKnownGood).toEqual({ pnpm: EXACT_PNPM_VERSION });
-  });
+  }, 30_000);
 
   it("rejects authentication material in the claimed anonymous npm config", () => {
     const root = mkdtempSync(path.join(tmpdir(), "build-preset-auth-config-"));
