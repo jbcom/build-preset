@@ -149,6 +149,12 @@ describe("release boundary", () => {
     expect(publish).toContain("packageManifest.version !== releaseManifest");
     expect(publish).toContain("/branches/main");
     expect(publish).toMatch(/permissions:\s*\n\s+contents: write\s*\n\s+actions: read/);
+    expect(publish.match(/GITEA_SERVER_URL:\s*\$\{\{ github\.server_url \}\}/g)).toHaveLength(1);
+    expect(
+      publish.match(
+        /export GITEA_SERVER_URL="\$\{REGISTRY_URL%\/api\/packages\/arcade-cabinet\/npm\/\}"/g,
+      ),
+    ).toHaveLength(2);
     expect(publish).not.toContain("git fetch origin main");
     expect(publish).toMatch(
       /BUILD_PRESET_CONSUMER_SOURCE:\s+\$\{\{ steps\.package\.outputs\.build_preset_version \}\}/,
