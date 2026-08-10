@@ -17,8 +17,8 @@ const admission = {
   rootPurl: "pkg:npm/%40arcade-cabinet/build-preset@0.3.0",
   componentCount: 32,
   dependencyCount: 33,
-  componentIdentitySha256: "149f90fc788e13500577c12b9374a887ab7279bc40e2c5a857bc07069e8cd501",
-  dependencyAdjacencySha256: "957de54afffbd2fed2c3ccdc307bf8dcc67ad0c99d046117e95bdd414da28c45",
+  componentIdentitySha256: "e468aa9e5ddb4148eeaadd5ed8441d04e6b4a26bac130e6cc71d60c87067134f",
+  dependencyAdjacencySha256: "58a6ce3c0351000232cf99685c55daf92555f29b533b73f14199c8182e9b000a",
 };
 
 async function rawSbom() {
