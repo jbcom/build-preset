@@ -29,18 +29,40 @@ function initAndroid(): void {
   );
 }
 
-function main(): void {
-  const [, , command] = process.argv;
+async function main(): Promise<void> {
+  const [, , command, ...arguments_] = process.argv;
   switch (command) {
     case "init-android":
       initAndroid();
       break;
+    case "package-release": {
+      const release = await import("../private-package-release/cli.mjs");
+      await release.main(arguments_);
+      break;
+    }
+    case "dependency-current": {
+      const current = await import("../private-package-release/dependency-current.mjs");
+      await current.dependencyCurrentMain(arguments_);
+      break;
+    }
     default:
       process.stderr.write(
-        `Unknown command: ${command ?? "(none)"}\n\nUsage:\n  build-preset init-android\n`,
+        [
+          `Unknown command: ${command ?? "(none)"}`,
+          "",
+          "Usage:",
+          "  build-preset init-android",
+          "  build-preset dependency-current --config <path>",
+          "  build-preset package-release <prepare|publish|profile-sbom> --config <path> [options]",
+          "",
+        ].join("\n"),
       );
       process.exitCode = 1;
   }
 }
 
-main();
+void main().catch((error: unknown) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode =
+    typeof error === "object" && error !== null && "exitCode" in error ? Number(error.exitCode) : 1;
+});

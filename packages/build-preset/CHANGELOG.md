@@ -3,6 +3,22 @@
 This package is versioned independently from Little Legends through the repository's
 Release Please manifest.
 
+## 0.3.0
+
+- Added the ESM-only `private-package-release` verifier with strict declarative
+  multi-package configs, exact Git/source/config/verifier receipt binding,
+  reproducible clean builds and tarballs, native pnpm CycloneDX admission, and
+  idempotent registry/tag/release retry handling.
+- Added the ESM-only `dependency-current` policy engine and CLI for public runtime
+  closures and exact private/framework boundaries, with frozen per-owner install
+  proof, canonical JSON evidence, graph/body limits, no redirects, and narrowly
+  scoped `@jbcom` authentication.
+- Hardened release filesystem paths, clean generated-output reconstruction,
+  immutable Git source checks, regular-blob common inputs, exact pack
+  membership, Gitea origin, create-release responses and annotated-tag
+  resolution, npm `latest` publication, script suppression, anonymous evidence
+  generation, and packed-consumer coverage for the new API and CLI surfaces.
+
 ## 0.2.0
 
 - Conformed Vite peers and generated configurations to Vite 8.2.1 and current

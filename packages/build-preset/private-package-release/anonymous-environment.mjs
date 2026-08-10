@@ -1,12 +1,14 @@
 #!/usr/bin/env node
+
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const AUTH_ENV_PATTERN = /auth|password|token|gitea/i;
-const AUTH_CONFIG_PATTERN = /(?:auth|password|token)[^=\r\n]*=/i;
+const AUTH_ENV_PATTERN = /auth|password|token|secret|credential|cookie|gitea/i;
+const AUTH_CONFIG_PATTERN = /(?:auth|password|token|secret|credential|cookie)[^=\r\n]*=/i;
 const SAFE_RUNTIME_AUTH_ENVIRONMENT = new Set(["XAUTHORITY"]);
+const CI_INTERNAL_ENV_PATTERN = /^(?:ACTIONS_|RUNNER_)/i;
 
 export function assertAnonymousNpmConfig(userConfig) {
   const contents = readFileSync(userConfig, "utf8");
@@ -25,13 +27,16 @@ export function createAnonymousEnvironment({ home, userConfig, baseEnv = process
   for (const [key, value] of Object.entries(baseEnv)) {
     if (
       value === undefined ||
-      (AUTH_ENV_PATTERN.test(key) && !SAFE_RUNTIME_AUTH_ENVIRONMENT.has(key))
+      (AUTH_ENV_PATTERN.test(key) && !SAFE_RUNTIME_AUTH_ENVIRONMENT.has(key)) ||
+      CI_INTERNAL_ENV_PATTERN.test(key) ||
+      key === "NODE_PATH"
     ) {
       continue;
     }
     if (/^npm_config_/i.test(key)) continue;
     environment[key] = value;
   }
+
   Object.assign(environment, {
     HOME: home,
     USERPROFILE: home,
@@ -54,6 +59,7 @@ function runCli() {
   const [, , home, userConfig] = process.argv;
   const [command, ...args] = process.argv.slice(separator + 1);
   const output = execFileSync(command, args, {
+    cwd: home,
     env: createAnonymousEnvironment({ home, userConfig }),
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],

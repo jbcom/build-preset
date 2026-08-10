@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertAnonymousNpmConfig,
   createAnonymousEnvironment,
-} from "../scripts/anonymous-environment.mjs";
+} from "../private-package-release/anonymous-environment.mjs";
 import {
   assertCommitAncestor,
   assertCycloneDxPackageIdentity,
@@ -85,14 +85,13 @@ describe("release boundary", () => {
     );
     const ci = readFileSync(path.join(repositoryRoot, ".gitea/workflows/ci.yml"), "utf8");
     const release = readFileSync(path.join(repositoryRoot, ".gitea/workflows/release.yml"), "utf8");
-    expect(publish).toContain("anonymous-environment.mjs");
-    expect(publish).toContain("remoteNames");
-    expect(publish).toContain("remoteSha !== localSha");
-    expect(publish).toContain('cd "$BUILD_PRESET_PACKAGE_DIR"');
+    expect(publish).toContain("dependency-current.json");
+    expect(publish).toContain("private-package-release.json");
+    expect(publish).toContain("packageManifest.version !== releaseManifest");
     expect(publish).toContain("/branches/main");
     expect(publish).not.toContain("git fetch origin main");
     expect(publish).toMatch(
-      /BUILD_PRESET_CONSUMER_SOURCE:\s+\$\{\{ steps\.package\.outputs\.version \}\}/,
+      /BUILD_PRESET_CONSUMER_SOURCE:\s+\$\{\{ steps\.package\.outputs\.build_preset_version \}\}/,
     );
     expect(publish).not.toMatch(/BUILD_PRESET_CONSUMER_SOURCE:.*outputs\.name.*@/);
     expect(ci).toContain("Fresh anonymous build-preset headed consumer");
@@ -106,6 +105,7 @@ describe("release boundary", () => {
     expect(release).toContain("assertCommitAncestor");
     expect(release).toContain("assertCycloneDxPackageIdentity");
     expect(release).toContain("assertExactChecksums");
+    expect(publish).not.toMatch(/(?:^|\s)\+\s+--(?:config|source|receipt)/m);
   });
 
   it("pins Linux workflow jobs so macOS host labels cannot claim them", () => {

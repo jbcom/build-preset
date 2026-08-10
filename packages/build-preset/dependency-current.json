@@ -1,0 +1,22 @@
+{
+  "profile": "arcade-cabinet/dependency-current-config/v1",
+  "configPath": "packages/build-preset/dependency-current.json",
+  "manifestPath": "packages/build-preset/package.json",
+  "policy": "public-runtime-closure",
+  "registries": {
+    "public": {
+      "url": "https://registry.npmjs.org/",
+      "access": "anonymous"
+    },
+    "scopes": {}
+  },
+  "privateScopes": [],
+  "forbiddenScopes": ["@arcade-cabinet", "@jbcom"],
+  "rootPackages": [],
+  "baselines": {},
+  "requireInstalledSections": ["dependencies"],
+  "manifestToolchain": {
+    "packageManager": "absent",
+    "nodeEngine": "24.x"
+  }
+}

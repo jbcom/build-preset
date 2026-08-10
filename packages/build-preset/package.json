@@ -1,6 +1,6 @@
 {
   "name": "@arcade-cabinet/build-preset",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared Vite/tsconfig/Biome/Capacitor/Vitest build-config conventions for arcade-cabinet fleet games, extracted from little-legends.",
   "type": "module",
   "license": "UNLICENSED",
@@ -23,6 +23,7 @@
     "CHANGELOG.md",
     "README.md",
     "dist",
+    "private-package-release",
     "tsconfig.base.json",
     "biome.base.json"
   ],
@@ -47,6 +48,14 @@
       "import": "./dist/vitest.js",
       "require": "./dist/vitest.cjs"
     },
+    "./private-package-release": {
+      "types": "./private-package-release/index.d.mts",
+      "import": "./private-package-release/index.mjs"
+    },
+    "./dependency-current": {
+      "types": "./private-package-release/dependency-current.d.mts",
+      "import": "./private-package-release/dependency-current.mjs"
+    },
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./biome.base.json": "./biome.base.json",
     "./package.json": "./package.json"
@@ -62,11 +71,23 @@
     "smoke:tarball": "node scripts/consumer-smoke.mjs",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm pack --dry-run && pnpm run smoke:tarball"
   },
+  "dependencies": {
+    "@cyclonedx/cyclonedx-library": "10.1.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "ajv-formats-draft2019": "1.6.1",
+    "canonicalize": "3.0.0",
+    "npm-package-arg": "14.0.0",
+    "packageurl-js": "2.0.1",
+    "semver": "7.8.5",
+    "spdx-expression-parse": "5.0.0",
+    "uuid": "14.0.1"
+  },
   "peerDependencies": {
     "@vitest/browser-playwright": "^4.1.10",
     "playwright": ">=1.62.1 <2",
-    "vitest": "^4.1.10",
-    "vite": "^8.2.1"
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   },
   "peerDependenciesMeta": {
     "@vitest/browser-playwright": {

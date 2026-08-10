@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAnonymousEnvironment } from "./anonymous-environment.mjs";
+import { createAnonymousEnvironment } from "../private-package-release/anonymous-environment.mjs";
 
 const packageRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = path.resolve(packageRoot, "../..");
@@ -99,7 +99,13 @@ try {
     "build-preset",
   );
   const installedEntries = new Set(await readdir(installedPackageRoot));
-  for (const required of ["dist", "README.md", "CHANGELOG.md", "package.json"]) {
+  for (const required of [
+    "dist",
+    "private-package-release",
+    "README.md",
+    "CHANGELOG.md",
+    "package.json",
+  ]) {
     if (!installedEntries.has(required)) throw new Error(`packed artifact omitted ${required}`);
   }
   for (const forbidden of ["src", "scripts", "tests"]) {
@@ -155,6 +161,14 @@ import path from "node:path";
 import { build } from "vite";
 import * as rootPreset from "@arcade-cabinet/build-preset";
 import * as capacitorPreset from "@arcade-cabinet/build-preset/capacitor";
+import {
+  validateReleaseConfig,
+  RELEASE_STATES,
+} from "@arcade-cabinet/build-preset/private-package-release";
+import {
+  validateDependencyCurrentConfig,
+  DependencyCurrentPolicyError,
+} from "@arcade-cabinet/build-preset/dependency-current";
 import { defineGamePreset } from "@arcade-cabinet/build-preset/vite";
 import { defineUnitTest } from "@arcade-cabinet/build-preset/vitest";
 
@@ -178,6 +192,51 @@ if ("androidReleaseWorkflowSnippet" in capacitorPreset) {
 if (capacitorPreset.defineCapacitorPreset({ appId: "com.jbcom.fixture", appName: "Fixture" }).webDir !== "dist") {
   throw new Error("Capacitor export failed");
 }
+if (RELEASE_STATES.NEW !== "NEW") throw new Error("release state export failed");
+if (new DependencyCurrentPolicyError("fixture").exitCode !== 2) {
+  throw new Error("dependency-current policy export failed");
+}
+const releaseConfig = validateReleaseConfig({
+  profile: "arcade-cabinet/private-package-release-config/v2",
+  repository: "arcade-cabinet/fixture",
+  configPath: "release.json",
+  workflowPath: ".gitea/workflows/release.yml",
+  mainBranch: "main",
+  releaseInputPaths: [],
+  registry: {
+    url: "https://registry.npmjs.org/",
+    scope: "@arcade-cabinet",
+  },
+  packages: [{
+    id: "fixture",
+    directory: "packages/fixture",
+    generatedPaths: ["packages/fixture/dist"],
+    sourcePaths: ["packages/fixture"],
+    name: "@arcade-cabinet/fixture",
+    tagPrefix: "fixture-v",
+    admission: null,
+  }],
+}, { requireAdmissions: false });
+if (releaseConfig.packages[0].id !== "fixture") throw new Error("release config export failed");
+const currentConfig = validateDependencyCurrentConfig({
+  profile: "arcade-cabinet/dependency-current-config/v1",
+  configPath: "dependency-current.json",
+  manifestPath: "package.json",
+  policy: "public-runtime-closure",
+  registries: {
+    public: { url: "https://registry.npmjs.org/", access: "anonymous" },
+    scopes: {},
+  },
+  privateScopes: [],
+  forbiddenScopes: ["@arcade-cabinet", "@jbcom"],
+  rootPackages: [],
+  baselines: {},
+  requireInstalledSections: ["dependencies"],
+  manifestToolchain: { packageManager: "absent", nodeEngine: "24.x" },
+});
+if (currentConfig.policy !== "public-runtime-closure") {
+  throw new Error("dependency-current config export failed");
+}
 
 await build(
   defineGamePreset({
@@ -192,6 +251,10 @@ await build(
   await writeFile(
     path.join(scratch, "smoke.ts"),
     `import { defineBrowserTest, defineGamePreset } from "@arcade-cabinet/build-preset";
+import type { ReleaseReceipt } from "@arcade-cabinet/build-preset/private-package-release";
+import { RELEASE_STATES } from "@arcade-cabinet/build-preset/private-package-release";
+import type { DependencyCurrentConfig, VerifiedDependencyEdge } from "@arcade-cabinet/build-preset/dependency-current";
+import { DependencyCurrentInfrastructureError } from "@arcade-cabinet/build-preset/dependency-current";
 
 const browser = defineBrowserTest({ includeThree: false });
 const args: readonly string[] = browser.browser.provider.options.launchOptions?.args ?? [];
@@ -201,6 +264,16 @@ defineGamePreset({
   appName: "typed-fixture",
   srcDir: new URL("./src", import.meta.url).pathname,
 });
+const receipt = null as ReleaseReceipt | null;
+const current = null as DependencyCurrentConfig | null;
+const edge = null as VerifiedDependencyEdge | null;
+void receipt;
+void current;
+void edge;
+if (RELEASE_STATES.NEW !== "NEW") throw new Error("typed release export missing");
+if (new DependencyCurrentInfrastructureError("fixture").exitCode !== 3) {
+  throw new Error("typed dependency-current export missing");
+}
 `,
   );
   await writeFile(
@@ -266,6 +339,19 @@ export default defineConfig({
   const cliOutput = pnpm(["exec", "build-preset", "init-android"], scratch, anonymousEnvironment);
   if (!cliOutput.includes("versionCode") || !cliOutput.includes("bundleRelease")) {
     throw new Error("installed build-preset CLI omitted the Android version scaffold");
+  }
+  for (const arguments_ of [["dependency-current"], ["package-release"]]) {
+    try {
+      pnpm(["exec", "build-preset", ...arguments_], scratch, anonymousEnvironment);
+      throw new Error(`${arguments_[0]} invalid invocation unexpectedly succeeded`);
+    } catch (error) {
+      const expectedStatus = arguments_[0] === "dependency-current" ? 2 : 1;
+      if (error?.status !== expectedStatus) {
+        throw new Error(
+          `${arguments_[0]} CLI dispatch exited ${error?.status}, expected ${expectedStatus}`,
+        );
+      }
+    }
   }
   const builtAssets = await readdir(path.join(scratch, "dist/assets"));
   const builtSource = (

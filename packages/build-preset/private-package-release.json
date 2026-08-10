@@ -1,0 +1,34 @@
+{
+  "profile": "arcade-cabinet/private-package-release-config/v2",
+  "repository": "arcade-cabinet/little-legends",
+  "configPath": "packages/build-preset/private-package-release.json",
+  "workflowPath": ".gitea/workflows/publish-build-preset.yml",
+  "mainBranch": "main",
+  "releaseInputPaths": [
+    ".gitea/workflows/release.yml",
+    ".release-please-manifest.json",
+    "release-please-config.json"
+  ],
+  "registry": {
+    "url": "https://registry.npmjs.org/",
+    "scope": "@arcade-cabinet"
+  },
+  "packages": [
+    {
+      "id": "build-preset",
+      "directory": "packages/build-preset",
+      "generatedPaths": ["packages/build-preset/dist"],
+      "sourcePaths": ["packages/build-preset"],
+      "name": "@arcade-cabinet/build-preset",
+      "tagPrefix": "build-preset-v",
+      "admission": {
+        "profile": "arcade-cabinet/pnpm-11.21.0/cyclonedx-1.7/lockfile-only-prod-no-peers-no-optional/v1",
+        "rootPurl": "pkg:npm/%40arcade-cabinet/build-preset@0.3.0",
+        "componentCount": 32,
+        "dependencyCount": 33,
+        "componentIdentitySha256": "149f90fc788e13500577c12b9374a887ab7279bc40e2c5a857bc07069e8cd501",
+        "dependencyAdjacencySha256": "957de54afffbd2fed2c3ccdc307bf8dcc67ad0c99d046117e95bdd414da28c45"
+      }
+    }
+  ]
+}
