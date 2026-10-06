@@ -150,8 +150,42 @@ currency policy failure; exit 3 denotes registry/network infrastructure failure.
 Registry reads are bounded streaming GETs with an abort timeout, JSON media-type
 validation, no redirects, graph caps, and no ambient npm configuration.
 
-The Capacitor subpath intentionally exports configuration and the
-`androidVersionGradleSnippet()` scaffold only. Release workflow YAML is not a
+### Capacitor config and `overrides`
+
+`defineCapacitorPreset({ appId, appName, ... })` returns a plain
+`CapacitorConfig`-shaped object. Its `overrides` option is merged over the
+preset's defaults (`server.androidScheme: "https"`, `android.allowMixedContent:
+false`, and `android.webContentsDebuggingEnabled` derived from `CAP_DEBUG`):
+
+- `server`, `android` and `ios` merge one level deep, so
+  `overrides: { server: { hostname: "game.local" } }` keeps
+  `server.androidScheme`, and `overrides: { android: { buildOptions: {...} } }`
+  keeps `allowMixedContent` and `webContentsDebuggingEnabled`.
+- `plugins` merges per plugin: each plugin's options object merges one level
+  deep, and plugins named on only one side pass through.
+- Inside a merged object the override wins per key. To unset a preset key,
+  pass it explicitly as `undefined`.
+- Every other key (`appId`, `webDir`, `backgroundColor`, ...) is replaced
+  wholesale, as are arrays and nested values below the merged level.
+
+```ts
+import { defineCapacitorPreset } from "@arcade-cabinet/build-preset/capacitor";
+
+export default defineCapacitorPreset({
+  appId: "com.example.game",
+  appName: "Game",
+  overrides: {
+    server: { hostname: "game.local" }, // androidScheme: "https" is kept
+    android: { allowMixedContent: true }, // wins over the preset's false
+  },
+});
+```
+
+`mergeCapacitorConfig(base, overrides)` applies the same rules to any two config
+objects, for consumers that layer further environment-specific config on top.
+
+The Capacitor subpath intentionally exports configuration, `mergeCapacitorConfig()`
+and the `androidVersionGradleSnippet()` scaffold only. Release workflow YAML is not a
 package API: signing identity, application metadata, ABI policy, and release
 verification are game-specific, and must fail closed. In particular, a release
 job must never substitute a debug APK when production signing material is
