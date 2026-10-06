@@ -57,6 +57,7 @@ export default defineConfig({
   optimizeDeps: browserTest.optimizeDeps,
   test: {
     include: browserTest.include,
+    fileParallelism: browserTest.fileParallelism,
     browser: browserTest.browser,
   },
 });

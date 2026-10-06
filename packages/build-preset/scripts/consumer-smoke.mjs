@@ -13,6 +13,9 @@ const packageJson = JSON.parse(await readFile(path.join(packageRoot, "package.js
 const pnpmCli = process.env.npm_execpath;
 const requestedSource = process.env.BUILD_PRESET_CONSUMER_SOURCE;
 const runBrowser = process.env.BUILD_PRESET_RUN_BROWSER === "1";
+// The clean consumer exercises the Vitest line it is told to; the peer range
+// spans two majors, so CI runs this once per supported major.
+const consumerVitestVersion = process.env.BUILD_PRESET_CONSUMER_VITEST ?? "4.1.10";
 
 if (!pnpmCli) {
   throw new Error("consumer smoke must run through pnpm so npm_execpath identifies the pinned CLI");
@@ -75,11 +78,11 @@ try {
         dependencies: {
           "@arcade-cabinet/build-preset": packageSource,
           "@types/node": "24.13.3",
-          "@vitest/browser-playwright": "4.1.10",
+          "@vitest/browser-playwright": consumerVitestVersion,
           playwright: "1.62.1",
           typescript: "7.0.2",
           vite: "8.2.1",
-          vitest: "4.1.10",
+          vitest: consumerVitestVersion,
         },
       },
       null,
@@ -323,6 +326,7 @@ export default defineConfig({
   optimizeDeps: browserTest.optimizeDeps,
   test: {
     include: browserTest.include,
+    fileParallelism: browserTest.fileParallelism,
     browser: browserTest.browser,
     testTimeout: 15_000,
   },

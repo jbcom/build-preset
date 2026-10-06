@@ -61,7 +61,8 @@ describe("defineBrowserTest", () => {
 
   it("defaults fileParallelism to false (shared browser instance)", () => {
     const config = defineBrowserTest();
-    expect(config.browser.fileParallelism).toBe(false);
+    expect(config.fileParallelism).toBe(false);
+    expect("fileParallelism" in config.browser).toBe(false);
   });
 
   it("returns the default GPU/ANGLE launch args plus any extras", () => {

@@ -82,7 +82,6 @@ export interface BrowserTestFragment {
   instances: Array<{ browser: PlaywrightBrowserName }>;
   headless: false;
   screenshotFailures: true;
-  fileParallelism: boolean;
   provider: ReturnType<typeof playwright>;
 }
 
@@ -111,6 +110,9 @@ function rejectHeadlessOptions(options: DefineBrowserTestOptions): void {
 export function defineBrowserTest(options: DefineBrowserTestOptions = {}): {
   include: string[];
   optimizeDeps: { include: string[] };
+  /** Top-level `test.fileParallelism`. Vitest 5 deprecates `browser.fileParallelism`
+   * in favour of this option; Vitest 4 falls back to it for browser mode too. */
+  fileParallelism: boolean;
   browser: BrowserTestFragment;
 } {
   rejectHeadlessOptions(options);
@@ -127,12 +129,12 @@ export function defineBrowserTest(options: DefineBrowserTestOptions = {}): {
     optimizeDeps: {
       include: [...(includeThree ? ["three"] : []), ...optimizeDepsInclude],
     },
+    fileParallelism,
     browser: {
       enabled: true,
       instances: [{ browser: "chromium" }],
       headless: false,
       screenshotFailures: true,
-      fileParallelism,
       provider: playwright({
         launchOptions: {
           args: defaultBrowserLaunchArgs(extraLaunchArgs),
