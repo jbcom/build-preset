@@ -1,0 +1,14 @@
+# The root is a private release harness: it installs the package as its own verifier
+# (`workspace:*`), which the private-package-release CLI requires before it publishes.
+packages:
+  - "."
+  - "packages/build-preset"
+
+allowBuilds:
+  esbuild: true
+
+# The release verifier requires the dependency graph's selected versions to be
+# current, so the exact release tooling dependency cannot wait out a minimum
+# release-age window.
+minimumReleaseAgeExclude:
+  - '@cyclonedx/cyclonedx-library@10.1.1'

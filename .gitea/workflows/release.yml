@@ -1,0 +1,334 @@
+name: Release
+
+# release-please plans versions for @arcade-cabinet/build-preset (tags build-preset-v<version>).
+# Planning stays closed until the current manifest version is really released: its tag, Gitea
+# release, attested assets and anonymous registry bytes all verify. The publish workflow
+# (publish.yml, dispatched on an exact green main commit) performs the release itself.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Gitea release-please
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      # Must precede release-please: without these labels it cannot find a merged release PR.
+      - name: Ensure release lifecycle labels exist
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_SERVER_URL: ${{ github.server_url }}
+          GITEA_REPOSITORY: ${{ github.repository }}
+        run: node scripts/ensure-release-labels.mjs
+      - id: package-bootstrap
+        name: Keep release planning closed until package tags are real
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_SERVER_URL: ${{ github.server_url }}
+          GITEA_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFile, readFile } from 'node:fs/promises';
+          import {
+            assertCommitAncestor,
+            assertCycloneDxPackageIdentity,
+            assertExactChecksums,
+          } from './packages/build-preset/scripts/release-attestation.mjs';
+
+          const manifest = JSON.parse(await readFile('.release-please-manifest.json', 'utf8'));
+          const version = manifest['packages/build-preset'];
+          if (!version) throw new Error('build-preset is absent from the release manifest');
+          const tag = `build-preset-v${version}`;
+          const packageName = '@arcade-cabinet/build-preset';
+          const api =
+            `${process.env.GITEA_SERVER_URL}/api/v1/repos/${process.env.GITEA_REPOSITORY}`;
+          const headers = { Authorization: `token ${process.env.GITEA_TOKEN}` };
+          const request = async (route, allowNotFound = false) => {
+            const response = await fetch(`${api}${route}`, { headers });
+            if (allowNotFound && response.status === 404) return null;
+            if (!response.ok) {
+              throw new Error(`${route} returned ${response.status}: ${await response.text()}`);
+            }
+            return response;
+          };
+          const releaseResponse = await request(
+            `/releases/tags/${encodeURIComponent(tag)}`,
+            true,
+          );
+          if (!releaseResponse) {
+            process.stdout.write(
+              `Release planning stays closed until the exact-main package gate creates ${tag}\n`,
+            );
+            await appendFile(process.env.GITHUB_OUTPUT, 'ready=false\n');
+            process.exit(0);
+          }
+
+          const release = await releaseResponse.json();
+          if (release.tag_name !== tag || release.draft || release.prerelease) {
+            throw new Error(`release metadata does not identify stable ${tag}`);
+          }
+
+          const refPayload = await (
+            await request(`/git/refs/tags/${encodeURIComponent(tag)}`)
+          ).json();
+          const refs = Array.isArray(refPayload) ? refPayload : [refPayload];
+          const ref = refs.find((entry) => entry.ref === `refs/tags/${tag}`) ?? refs[0];
+          let targetSha = ref?.object?.sha;
+          let targetType = ref?.object?.type;
+          while (targetType === 'tag') {
+            const tagObject = await (await request(`/git/tags/${targetSha}`)).json();
+            targetSha = tagObject.object?.sha;
+            targetType = tagObject.object?.type;
+          }
+          if (!targetSha || targetType !== 'commit') {
+            throw new Error(`tag ${tag} does not resolve to a commit`);
+          }
+          const mainBranch = await (await request('/branches/main')).json();
+          const mainSha = mainBranch.commit?.id;
+          if (!mainSha) throw new Error('Gitea main branch omitted its commit id');
+          await assertCommitAncestor({
+            ancestorSha: targetSha,
+            headSha: mainSha,
+            loadCommit: async (sha) =>
+              (
+                await request(
+                  `/git/commits/${sha}?stat=false&verification=false&files=false`,
+                )
+              ).json(),
+          });
+          if (!String(release.body ?? '').includes(targetSha)) {
+            throw new Error(`release source mismatch: ${tag} does not attest ${targetSha}`);
+          }
+
+          const readJsonAtTag = async (file) => {
+            const payload = await (
+              await request(`/contents/${file}?ref=${encodeURIComponent(targetSha)}`)
+            ).json();
+            if (payload.encoding !== 'base64' || !payload.content) {
+              throw new Error(`${file} at ${targetSha} is not base64 file content`);
+            }
+            return JSON.parse(Buffer.from(payload.content, 'base64').toString('utf8'));
+          };
+          const packageAtTag = await readJsonAtTag('packages/build-preset/package.json');
+          const manifestAtTag = await readJsonAtTag('.release-please-manifest.json');
+          if (packageAtTag.name !== packageName || packageAtTag.version !== version) {
+            throw new Error(
+              `package version mismatch at tag: expected ${packageName}@${version}, got ` +
+                `${packageAtTag.name ?? '<missing>'}@${packageAtTag.version ?? '<missing>'}`,
+            );
+          }
+          if (manifestAtTag['packages/build-preset'] !== version) {
+            throw new Error(`release manifest version mismatch at tag ${tag}`);
+          }
+
+          const registryBase =
+            `${process.env.GITEA_SERVER_URL}/api/packages/arcade-cabinet/npm/`;
+          const registryResponse = await fetch(
+            `${registryBase}${encodeURIComponent(packageName)}`,
+          );
+          if (!registryResponse.ok) {
+            throw new Error(
+              `anonymous registry metadata returned ${registryResponse.status}: ` +
+                `${await registryResponse.text()}`,
+            );
+          }
+          const registry = await registryResponse.json();
+          const registryVersion = registry.versions?.[version];
+          if (registry['dist-tags']?.latest !== version || !registryVersion) {
+            throw new Error(`anonymous registry latest/exact mismatch for ${packageName}@${version}`);
+          }
+          if (registryVersion.name !== packageName || registryVersion.version !== version) {
+            throw new Error(`registry package identity mismatch for ${packageName}@${version}`);
+          }
+          const tarballUrl = registryVersion.dist?.tarball;
+          const expectedIntegrity = registryVersion.dist?.integrity;
+          if (!tarballUrl || !expectedIntegrity) {
+            throw new Error(`registry metadata omitted tarball integrity for ${packageName}@${version}`);
+          }
+          const registryArchiveResponse = await fetch(tarballUrl);
+          if (!registryArchiveResponse.ok) {
+            throw new Error(`anonymous registry archive returned ${registryArchiveResponse.status}`);
+          }
+          const registryArchive = Buffer.from(await registryArchiveResponse.arrayBuffer());
+          const registryArchiveSha = createHash('sha256').update(registryArchive).digest('hex');
+          const registryIntegrity =
+            `sha512-${createHash('sha512').update(registryArchive).digest('base64')}`;
+          if (registryIntegrity !== expectedIntegrity) {
+            throw new Error(`registry archive integrity mismatch for ${packageName}@${version}`);
+          }
+
+          const expectedNames = [
+            `arcade-cabinet-build-preset-${version}.tgz`,
+            `${tag}-SHA256SUMS.txt`,
+            `${tag}-sbom.cdx.json`,
+          ].sort();
+          const assets = await (
+            await request(`/releases/${release.id}/assets?limit=100`)
+          ).json();
+          const remoteNames = assets.map((asset) => asset.name).sort();
+          if (JSON.stringify(remoteNames) !== JSON.stringify(expectedNames)) {
+            throw new Error(
+              `release asset set mismatch: expected ${expectedNames.join(', ')}, got ` +
+                `${remoteNames.join(', ')}`,
+            );
+          }
+          const downloaded = new Map();
+          for (const asset of assets) {
+            if (Number(asset.size ?? 0) <= 0) throw new Error(`release asset ${asset.name} is empty`);
+            const response = await fetch(asset.browser_download_url, { headers });
+            if (!response.ok) {
+              throw new Error(`release asset ${asset.name} returned ${response.status}`);
+            }
+            downloaded.set(asset.name, Buffer.from(await response.arrayBuffer()));
+          }
+          const archiveName = `arcade-cabinet-build-preset-${version}.tgz`;
+          const sbomName = `${tag}-sbom.cdx.json`;
+          const checksumName = `${tag}-SHA256SUMS.txt`;
+          const releaseArchiveSha = createHash('sha256')
+            .update(downloaded.get(archiveName))
+            .digest('hex');
+          if (registryArchiveSha !== releaseArchiveSha) {
+            throw new Error(
+              `registry/release archive mismatch: ${registryArchiveSha} != ${releaseArchiveSha}`,
+            );
+          }
+          assertExactChecksums({
+            contents: downloaded.get(checksumName).toString('utf8'),
+            expectedAssets: [archiveName, sbomName],
+            assets: downloaded,
+          });
+          const sbom = JSON.parse(downloaded.get(sbomName).toString('utf8'));
+          assertCycloneDxPackageIdentity(sbom, { packageName, version });
+
+          process.stdout.write(
+            `Verified ${packageName}@${version}, ${tag} at ${targetSha}, registry archive ` +
+              `${registryArchiveSha}, and exact release assets\n`,
+          );
+          await appendFile(process.env.GITHUB_OUTPUT, 'ready=true\n');
+          NODE
+      - id: release
+        if: steps.package-bootstrap.outputs.ready == 'true'
+        uses: joaquinjsb/gitea-release-please-action@cc782b45391b61346202e55b9fc66fd079289e9d # v4.1.10
+        with:
+          token: ${{ secrets.GITEA_TOKEN }}
+          git-username: ${{ github.actor }}
+          git-password: ${{ secrets.GITEA_TOKEN }}
+          github-api-url: ${{ github.server_url }}/api/v1
+          github-graphql-url: ${{ github.server_url }}/api/v1
+          changelog-host: ${{ github.server_url }}
+          repo-url: ${{ github.repository }}
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+      - name: Verify release lifecycle state
+        if: always() && steps.release.outcome == 'success'
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_SERVER_URL: ${{ github.server_url }}
+          GITEA_REPOSITORY: ${{ github.repository }}
+          RELEASES_CREATED: ${{ steps.release.outputs.releases_created }}
+          PATHS_RELEASED: ${{ steps.release.outputs.paths_released }}
+          PRS_CREATED: ${{ steps.release.outputs.prs_created }}
+          BUILD_PRESET_RELEASE_CREATED: ${{ steps.release.outputs['packages/build-preset--release_created'] }}
+          BUILD_PRESET_RELEASE_TAG: ${{ steps.release.outputs['packages/build-preset--tag_name'] }}
+          BUILD_PRESET_RELEASE_SHA: ${{ steps.release.outputs['packages/build-preset--sha'] }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const api = `${process.env.GITEA_SERVER_URL}/api/v1/repos/${process.env.GITEA_REPOSITORY}`;
+          const headers = { Authorization: `token ${process.env.GITEA_TOKEN}` };
+          const getJson = async (path) => {
+            const response = await fetch(`${api}${path}`, { headers });
+            if (!response.ok) {
+              throw new Error(`${path} returned ${response.status}: ${await response.text()}`);
+            }
+            return response.json();
+          };
+
+          let lifecycleObserved = false;
+          if (process.env.RELEASES_CREATED === 'true') {
+            const releasedPaths = JSON.parse(process.env.PATHS_RELEASED || '[]');
+            if (!Array.isArray(releasedPaths) || releasedPaths.length === 0) {
+              throw new Error('release-please created a release without paths_released');
+            }
+            const candidates = new Map([
+              [
+                'packages/build-preset',
+                {
+                  created: process.env.BUILD_PRESET_RELEASE_CREATED,
+                  tag: process.env.BUILD_PRESET_RELEASE_TAG,
+                  sha: process.env.BUILD_PRESET_RELEASE_SHA,
+                },
+              ],
+            ]);
+            for (const path of releasedPaths) {
+              const candidate = candidates.get(path);
+              if (!candidate) throw new Error(`unhandled release-please path: ${path}`);
+              if (candidate.created !== 'true' || !candidate.tag || !candidate.sha) {
+                throw new Error(`release-please omitted outputs for released path ${path}`);
+              }
+              const release = await getJson(
+                `/releases/tags/${encodeURIComponent(candidate.tag)}`,
+              );
+              if (release.tag_name !== candidate.tag) {
+                throw new Error(`release tag mismatch for ${path}: expected ${candidate.tag}`);
+              }
+              const refResponse = await getJson(
+                `/git/refs/tags/${encodeURIComponent(candidate.tag)}`,
+              );
+              const refs = Array.isArray(refResponse) ? refResponse : [refResponse];
+              const ref = refs.find((entry) => entry.ref === `refs/tags/${candidate.tag}`) ?? refs[0];
+              if (ref?.object?.sha !== candidate.sha) {
+                throw new Error(
+                  `release SHA mismatch for ${path}: expected ${candidate.sha}, got ` +
+                    `${ref?.object?.sha || '<missing>'}`,
+                );
+              }
+              process.stdout.write(`Verified ${path} release ${candidate.tag} at ${candidate.sha}\n`);
+            }
+            lifecycleObserved = true;
+          }
+          if (process.env.PRS_CREATED === 'true') {
+            const pulls = await getJson('/pulls?state=open&limit=100');
+            const releasePull = pulls.find(
+              (pull) =>
+                pull.base?.ref === 'main' &&
+                pull.head?.ref?.startsWith('release-please--branches--main--'),
+            );
+            if (!releasePull) {
+              throw new Error('release-please reported a PR but no open release PR exists');
+            }
+            const labels = new Set((releasePull.labels ?? []).map((label) => label.name));
+            if (!labels.has('autorelease: pending')) {
+              throw new Error(`release PR #${releasePull.number} is missing autorelease: pending`);
+            }
+            process.stdout.write(`Verified pending label on release PR #${releasePull.number}\n`);
+            lifecycleObserved = true;
+          }
+          if (!lifecycleObserved) {
+            process.stdout.write('No release or release PR was required\n');
+          }
+          NODE

@@ -1,0 +1,20 @@
+{
+  "name": "build-preset-repository",
+  "private": true,
+  "description": "Release harness for @arcade-cabinet/build-preset: binds the package as its own verifier and runs its gates.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "verify": "pnpm --filter @arcade-cabinet/build-preset verify",
+    "lint": "pnpm --filter @arcade-cabinet/build-preset exec biome check ../../scripts ../../package.json --config-path biome.base.json --vcs-enabled=false",
+    "dependency-current": "node packages/build-preset/dist/cli.js dependency-current --config packages/build-preset/dependency-current.json",
+    "labels:ensure": "node scripts/ensure-release-labels.mjs"
+  },
+  "devDependencies": {
+    "@arcade-cabinet/build-preset": "workspace:*"
+  }
+}

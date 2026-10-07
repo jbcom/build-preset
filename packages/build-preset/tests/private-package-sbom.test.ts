@@ -4,6 +4,10 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import type {
+  PrivatePackageReleaseConfig,
+  SbomAdmission,
+} from "../private-package-release/config.mjs";
 import { normalizeAndValidatePnpmSbom } from "../private-package-release/sbom.mjs";
 
 const packageRoot = path.resolve(import.meta.dirname, "..");
@@ -12,13 +16,18 @@ const pnpmCli = path.join(
   path.dirname(path.dirname(process.execPath)),
   "lib/node_modules/corepack/dist/pnpm.js",
 );
-const admission = {
-  profile: "arcade-cabinet/pnpm-11.21.0/cyclonedx-1.7/lockfile-only-prod-no-peers-no-optional/v1",
-  rootPurl: "pkg:npm/%40arcade-cabinet/build-preset@0.3.0",
-  componentCount: 32,
-  dependencyCount: 33,
-  componentIdentitySha256: "e468aa9e5ddb4148eeaadd5ed8441d04e6b4a26bac130e6cc71d60c87067134f",
-  dependencyAdjacencySha256: "58a6ce3c0351000232cf99685c55daf92555f29b533b73f14199c8182e9b000a",
+// The committed admission is the one the release gate enforces; testing a copy would let the two
+// drift apart silently.
+const releaseConfig = JSON.parse(
+  await readFile(path.join(packageRoot, "private-package-release.json"), "utf8"),
+) as PrivatePackageReleaseConfig;
+const committedAdmission = releaseConfig.packages.find(
+  ({ id }) => id === "build-preset",
+)?.admission;
+if (!committedAdmission) throw new Error("build-preset has no committed SBOM admission");
+const admission: SbomAdmission = committedAdmission;
+const { version } = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8")) as {
+  version: string;
 };
 
 async function rawSbom() {
@@ -63,7 +72,7 @@ async function normalize(inputPath: string, forbiddenValues: string[] = []) {
     releaseInputSha256: "4".repeat(64),
     archives: [
       {
-        name: "arcade-cabinet-build-preset-0.3.0.tgz",
+        name: `arcade-cabinet-build-preset-${version}.tgz`,
         sha256: "5".repeat(64),
       },
     ],
@@ -79,7 +88,7 @@ describe("private package SBOM admission", () => {
     const evidence = await normalize(output);
     expect(evidence).toMatchObject({
       packageName: "@arcade-cabinet/build-preset",
-      version: "0.3.0",
+      version,
       rootRef: admission.rootPurl,
       componentCount: admission.componentCount,
       dependencyCount: admission.dependencyCount,

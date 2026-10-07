@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import {
   access,
   mkdir,
@@ -237,18 +238,25 @@ describe("release state contracts", () => {
 });
 
 describe("verifier dependency binding", () => {
+  // The verifier is this package at its current version; the repository root binds it.
+  const packageVersion = (
+    JSON.parse(readFileSync(path.resolve(import.meta.dirname, "../package.json"), "utf8")) as {
+      version: string;
+    }
+  ).version;
+
   async function bindingFixture(installed: Record<string, unknown>) {
     const workspaceRoot = await realpath(path.resolve(import.meta.dirname, "../../.."));
     const packageRoot = await realpath(path.join(workspaceRoot, "packages/build-preset"));
     const projects = [
       {
         name: "@arcade-cabinet/build-preset",
-        version: "0.3.0",
+        version: packageVersion,
         path: packageRoot,
       },
       {
-        name: "little-legends",
-        version: "0.3.0",
+        name: "build-preset-repository",
+        version: "0.0.0",
         path: workspaceRoot,
         devDependencies: { "@arcade-cabinet/build-preset": installed },
       },
@@ -259,12 +267,36 @@ describe("verifier dependency binding", () => {
       verify: () =>
         assertVerifierDependencyBinding({
           workspaceRoot,
-          verifier: { packageName: "@arcade-cabinet/build-preset", version: "0.3.0" },
+          verifier: { packageName: "@arcade-cabinet/build-preset", version: packageVersion },
           toolchain,
           runCommand: async () => ({ stdout: JSON.stringify(projects), stderr: "" }),
         }),
     };
   }
+
+  it("rejects a root workspace range that is neither * nor the exact version", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "verifier-range-"));
+    try {
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({
+          devDependencies: { "@arcade-cabinet/build-preset": `workspace:^${packageVersion}` },
+        }),
+      );
+      await expect(
+        assertVerifierDependencyBinding({
+          workspaceRoot: root,
+          verifier: { packageName: "@arcade-cabinet/build-preset", version: packageVersion },
+          toolchain,
+          runCommand: async () => {
+            throw new Error("the spec check must refuse before pnpm runs");
+          },
+        }),
+      ).rejects.toThrow(/does not exactly bind/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 
   it("authenticates pnpm's link entry through its exact package path and manifest", async () => {
     const workspaceRoot = await realpath(path.resolve(import.meta.dirname, "../../.."));
@@ -292,9 +324,9 @@ describe("verifier dependency binding", () => {
     try {
       await writeFile(
         path.join(holder, "package.json"),
-        JSON.stringify({ name: "@arcade-cabinet/build-preset", version: "0.3.0" }),
+        JSON.stringify({ name: "@arcade-cabinet/build-preset", version: packageVersion }),
       );
-      const fixture = await bindingFixture({ version: "0.3.0", path: holder });
+      const fixture = await bindingFixture({ version: packageVersion, path: holder });
       await expect(fixture.verify()).rejects.toThrow(/executing package root/);
     } finally {
       await rm(holder, { recursive: true, force: true });
