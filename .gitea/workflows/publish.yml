@@ -1,0 +1,142 @@
+name: Publish build preset
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed and green main commit to publish
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-build-preset
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify, publish, and attest exact build preset
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: true
+      REGISTRY_URL: https://registry.npmjs.org/
+      EXPECTED_SOURCE_SHA: ${{ github.event.inputs.source_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.inputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact main with a successful exact-source CI run
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_SERVER_URL: ${{ github.server_url }}
+          GITEA_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          node <<'NODE'
+          const api = `${process.env.GITEA_SERVER_URL}/api/v1/repos/${process.env.GITEA_REPOSITORY}`;
+          const headers = { Authorization: `token ${process.env.GITEA_TOKEN}` };
+          const request = async (route) => {
+            const response = await fetch(`${api}${route}`, { headers, redirect: 'manual' });
+            if (!response.ok) {
+              throw new Error(`${route} returned ${response.status}: ${await response.text()}`);
+            }
+            return response.json();
+          };
+          const branch = await request('/branches/main');
+          if (branch.commit?.id !== process.env.EXPECTED_SOURCE_SHA) {
+            throw new Error('requested source is not exact Gitea main');
+          }
+          const payload = await request('/actions/runs?branch=main&limit=50');
+          const runs = payload.workflow_runs ?? payload.runs ?? [];
+          const exactGreen = runs.find(
+            (run) =>
+              run.head_sha === process.env.EXPECTED_SOURCE_SHA &&
+              run.path === 'ci.yml@refs/heads/main' &&
+              run.status === 'completed' &&
+              run.conclusion === 'success',
+          );
+          if (!exactGreen) throw new Error('no successful exact-main CI run');
+          process.stdout.write(`Exact-main CI proof: run ${exactGreen.id}\n`);
+          NODE
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.21.0 --activate
+      - name: Require the exact supported toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = "v24.19.0"
+          test "$(npm --version)" = "11.17.0"
+          test "$(pnpm --version)" = "11.21.0"
+      - run: pnpm install --frozen-lockfile
+      - name: Re-verify exact package source and dependency currency
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm audit --audit-level=high --prod
+          pnpm --filter @arcade-cabinet/build-preset verify
+          node packages/build-preset/dist/cli.js dependency-current \
+            --config packages/build-preset/dependency-current.json
+          pnpm install --lockfile-only
+          git diff --exit-code pnpm-lock.yaml
+      - name: Install headed Chromium
+        run: pnpm exec playwright install --with-deps --no-shell chromium
+      - id: package
+        name: Preflight the immutable registry and release transition
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITEA_SERVER_URL="${REGISTRY_URL%/api/packages/arcade-cabinet/npm/}"
+          release_root="$RUNNER_TEMP/private-package-release"
+          verification_root="$RUNNER_TEMP/private-package-verification"
+          receipt="$RUNNER_TEMP/private-package-release-receipt.json"
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const packageManifest = JSON.parse(
+            await readFile('packages/build-preset/package.json', 'utf8'),
+          );
+          const releaseManifest = JSON.parse(
+            await readFile('.release-please-manifest.json', 'utf8'),
+          );
+          if (packageManifest.version !== releaseManifest['packages/build-preset']) {
+            throw new Error('build-preset package and release-please versions disagree');
+          }
+          NODE
+          node packages/build-preset/dist/cli.js package-release prepare \
+            --config packages/build-preset/private-package-release.json \
+            --source "$EXPECTED_SOURCE_SHA" \
+            --release-root "$release_root" \
+            --verification-root "$verification_root" \
+            --receipt "$receipt"
+          echo "receipt=$receipt" >> "$GITHUB_OUTPUT"
+      - name: Revalidate and perform only the planned immutable mutations
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_REPOSITORY: ${{ github.repository }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITEA_SERVER_URL="${REGISTRY_URL%/api/packages/arcade-cabinet/npm/}"
+          node packages/build-preset/dist/cli.js package-release publish \
+            --config packages/build-preset/private-package-release.json \
+            --release-root "$RUNNER_TEMP/private-package-release" \
+            --receipt "${{ steps.package.outputs.receipt }}"
+      - name: Prove fresh anonymous registry ESM, CJS, types, CLI, Vite, and headed use
+        env:
+          BUILD_PRESET_CONSUMER_SOURCE: ${{ steps.package.outputs.build_preset_version }}
+          BUILD_PRESET_RUN_BROWSER: "1"
+        run: xvfb-run -a pnpm --filter @arcade-cabinet/build-preset run smoke:tarball
