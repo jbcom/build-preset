@@ -68,7 +68,7 @@ export default defineConfig({
             },
             {
               group: "Project",
-              pages: ["decisions", "contributing", "release-history"],
+              pages: ["decisions", "development", "release-history"],
             },
           ],
         }),

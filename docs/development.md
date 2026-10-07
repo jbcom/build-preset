@@ -1,5 +1,5 @@
 ---
-title: Contributing
+title: Development
 description: Set up build-preset, validate a change, and contribute through the protected workflow.
 ---
 
