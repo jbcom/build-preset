@@ -168,6 +168,10 @@ describe("release boundary", () => {
     expect(release).toContain("assertCommitAncestor");
     expect(release).toContain("assertCycloneDxPackageIdentity");
     expect(release).toContain("assertExactChecksums");
+    // The registry answers `@scope%2Fname` and 404s `%40scope%2Fname`: every package URL the
+    // gate builds must use npm's spelling.
+    expect(release).toContain("encodeURIComponent(packageName).replace(/^%40/u, '@')");
+    expect(release).not.toMatch(/encodeURIComponent\(packageName\)(?!\.replace)/);
     expect(publish).not.toMatch(/(?:^|\s)\+\s+--(?:config|source|receipt)/m);
   });
 
