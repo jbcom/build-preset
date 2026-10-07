@@ -22,10 +22,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # engines.node in package.json is the floor (>=24). Windows is covered
+        # engines.node in package.json is the floor (>=22). Windows is covered
         # because the Vite preset normalizes Windows paths and the smoke spawns
         # processes.
         include:
+          - os: ubuntu-24.04
+            node: "22"
           - os: ubuntu-24.04
             node: "24"
           - os: ubuntu-24.04
@@ -122,10 +124,7 @@ jobs:
   gate:
     name: CI / gate
     needs: [verify, browser, docs, sonarcloud, pre-commit]
-    if: >-
-      always() && (github.event_name != 'pull_request' ||
-      !(startsWith(github.event.pull_request.head.ref, 'release-please--') ||
-      (github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.title, 'non-major'))))
+    if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: Require every native validation job
@@ -136,8 +135,6 @@ jobs:
           SONARCLOUD_RESULT: ${{ needs.sonarcloud.result }}
           PRE_COMMIT_RESULT: ${{ needs.pre-commit.result }}
         run: |
-          test "$VERIFY_RESULT" = success
-          test "$BROWSER_RESULT" = success
-          test "$DOCS_RESULT" = success
-          test "$SONARCLOUD_RESULT" = success || test "$SONARCLOUD_RESULT" = skipped
-          test "$PRE_COMMIT_RESULT" = success
+          for result in "$VERIFY_RESULT" "$BROWSER_RESULT" "$DOCS_RESULT" "$SONARCLOUD_RESULT" "$PRE_COMMIT_RESULT"; do
+            test "$result" = success || test "$result" = skipped || exit 1
+          done

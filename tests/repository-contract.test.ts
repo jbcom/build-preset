@@ -7,6 +7,16 @@ const readJson = (file: string) => JSON.parse(readFileSync(path.join(root, file)
 const packageJson = readJson("package.json");
 
 describe("repository contract", () => {
+  it("supports every maintained Node line without exact patch selectors", () => {
+    expect(packageJson.engines.node).toBe(">=22");
+    const workflow = readFileSync(path.join(root, ".github/workflows/ci.yml"), "utf8");
+    for (const major of [22, 24, 26]) {
+      expect(workflow).toContain(`- os: ubuntu-24.04\n            node: "${major}"`);
+    }
+    expect(readFileSync(path.join(root, ".nvmrc"), "utf8").trim()).toBe("26");
+    expect(workflow).not.toMatch(/node(?:-version)?: ["']?\d+\.\d+\.\d+/);
+  });
+
   it("keeps the package and the release manifest on the same version", () => {
     expect(readJson(".release-please-manifest.json")["."]).toBe(packageJson.version);
   });

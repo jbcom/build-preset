@@ -6,7 +6,8 @@ from reading the code alone.
 ## Toolchain
 
 - Package manager: pnpm, pinned in `package.json#packageManager`. Use `mise install` (reads
-  `mise.toml`) for Node 26 and pnpm 12, or `corepack enable`.
+  `mise.toml`) for the default Node 26 and pnpm 12, or `corepack enable`. Node.js 22, 24 and 26
+  are supported; CI verifies each maintained line without requiring an exact patch version.
 - This is a pnpm workspace with two members: `.` (the published package) and `docs/` (the private
   Sourcey documentation site). Root scripts operate on the package; `pnpm docs:*` delegate to
   `docs/` via `pnpm --filter build-preset-docs`. Sourcey emits `docs/dist/`, including the site

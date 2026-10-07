@@ -99,7 +99,7 @@ preference: the consumer still asserts a non-persistent runtime mute route in it
 
 | | Supported |
 | --- | --- |
-| Node.js | 24 and newer (CI verifies 24 and 26; Windows on 26) |
+| Node.js | 22, 24 and 26 (CI verifies each on Linux; Windows on 26) |
 | Vite | `^8.2.1` |
 | Vitest | `^4.1.10` or `^5.0.0` |
 | `@vitest/browser-playwright` | `^4.1.10` or `^5.0.0`, matching Vitest |

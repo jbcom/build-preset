@@ -50,11 +50,13 @@ that never builds a library does not need tsup's types.
 ## The toolchain is Node 26, pnpm 12, TypeScript 7
 
 **Decision.** `.nvmrc` and `mise.toml` pin Node 26 and pnpm 12, TypeScript is 7, and `engines.node`
-is `>=24`. CI verifies Node 24 and 26 on Linux and Node 26 on Windows (the package normalizes
+is `>=22`. CI verifies Node 22, 24 and 26 on Linux and Node 26 on Windows (the package normalizes
 Windows paths).
 
-**Why.** Node 24 is the oldest line still in maintenance, and a preset that cannot be built on the
-current line has nothing to offer. TypeScript 7 removed `node10` module resolution, so the
+**Why.** Node 22 is the oldest maintained line. Support follows maintained lines rather than every
+historical patch; local gates and packed consumers verify Node 22 and 26. Development selectors
+use majors, and no script or hook requires equality to a patch version. TypeScript 7 removed
+`node10` module resolution, so the
 CommonJS build uses `moduleResolution: bundler`. Dev dependencies track current releases rather than
 exact old pins; the peer ranges (Vite `^8.2.1`, Vitest 4 or 5, Playwright `>=1.62.1 <2`) are the
 compatibility promise and the packed-consumer smoke checks both Vitest majors.
