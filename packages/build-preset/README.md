@@ -39,8 +39,8 @@ The package also exports Capacitor and Vitest factories plus shared TypeScript
 and Biome base configurations. Framework plugins and game-specific settings
 remain consumer-owned.
 
-Browser-test fragments are headed-only and construct the Vitest 4 Playwright
-provider themselves, with the process-level `--mute-audio` backstop wired into
+Browser-test fragments are headed-only and construct the Vitest Playwright
+provider themselves (Vitest 4 or 5), with the process-level `--mute-audio` backstop wired into
 `provider.options.launchOptions.args`. Use the returned root and test fragments
 directly; there is no detached launch-argument array to remember:
 

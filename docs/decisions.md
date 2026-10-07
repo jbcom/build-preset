@@ -62,3 +62,12 @@ repository's CI.
 
 `package-release` binds the root `LICENSE` as a release input. The package is `UNLICENSED`, and the
 repository carries the same proprietary notice little-legends did.
+
+## Commits dated before the last release are restated
+
+The Gitea release-please action walks commits newest-first by date and stops at the last release
+commit. Branches started before the move (the Vitest 5 peers and the nested Capacitor overrides,
+both dated 2026-10-06) merged after the `build-preset-v0.3.0` tag commit (2026-10-07), so the walk
+stopped before reaching them and proposed 0.3.1 instead of 0.4.0. A forward commit restates both
+changes as release-please body entries. To avoid it, rebase a branch whose commits predate the
+latest release before merging it; the rebase refreshes the committer dates.
