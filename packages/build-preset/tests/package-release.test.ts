@@ -301,6 +301,9 @@ describe("verifier dependency binding", () => {
   it("authenticates pnpm's link entry through its exact package path and manifest", async () => {
     const workspaceRoot = await realpath(path.resolve(import.meta.dirname, "../../.."));
     const packageRoot = await realpath(path.join(workspaceRoot, "packages/build-preset"));
+    // The repository root binds its own package as `workspace:*`; that spec must be accepted.
+    const rootManifest = JSON.parse(readFileSync(path.join(workspaceRoot, "package.json"), "utf8"));
+    expect(rootManifest.devDependencies["@arcade-cabinet/build-preset"]).toBe("workspace:*");
     const fixture = await bindingFixture({
       from: "@arcade-cabinet/build-preset",
       version: "link:packages/build-preset",
