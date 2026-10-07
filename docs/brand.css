@@ -1,0 +1,12 @@
+:root {
+  --sourcey-primary: #1d3a2f;
+  --sourcey-primary-light: #3f8f6e;
+  --sourcey-primary-dark: #0e1f18;
+  --preset-gold: #8a6a1f;
+}
+
+/* A deep green and a brass accent carried into an otherwise deliberately quiet
+ * documentation surface. */
+a:hover {
+  color: var(--preset-gold);
+}

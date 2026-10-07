@@ -1,0 +1,17 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "build-preset",
+  "description": "Shared Vite 8, Vitest, Capacitor, tsup, TypeScript and Biome configuration for browser games, with headed, muted real-browser testing.",
+  "branch": "main",
+  "folders": ["docs", "src"],
+  "excludeFolders": ["node_modules", "dist", "coverage", "docs/dist", "docs/node_modules"],
+  "excludeFiles": ["CHANGELOG.md"],
+  "rules": [
+    "defineBrowserTest is headed-only and always passes --mute-audio; never add a headless option.",
+    "Every factory accepts an overrides option that is merged last.",
+    "srcDir must be an absolute path; a relative path throws.",
+    "Use Rolldown codeSplitting groups through heavyDeps, never manualChunks.",
+    "Import from the subpaths (build-preset/vite, /vitest, /capacitor, /tsup); /tsup is not in the barrel.",
+    "The package has no runtime dependencies; vite, vitest, @vitest/browser-playwright and playwright are peers."
+  ]
+}

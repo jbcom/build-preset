@@ -1,0 +1,23 @@
+# build-preset
+
+> Shared build conventions for browser games: a Vite 8 game config, Vitest unit and headed, muted
+> real-browser test fragments (Vitest 4 or 5), a Capacitor config with documented merge rules, a tsup
+> library build, and TypeScript and Biome base configs. Configuration only, with no runtime
+> dependencies.
+
+## Docs
+
+- [Documentation site](https://jonbogaty.com/build-preset/): the published, browsable version of
+  everything below.
+- [README](https://github.com/jbcom/build-preset/blob/main/README.md): install, quick start, API
+  overview, compatibility.
+- [API reference](https://github.com/jbcom/build-preset/blob/main/docs/API.md): every export and
+  option.
+- [Architecture](https://github.com/jbcom/build-preset/blob/main/docs/ARCHITECTURE.md): contracts,
+  module boundaries, build and packaging, intentional limits.
+- [Decisions](https://github.com/jbcom/build-preset/blob/main/docs/decisions.md): why the package is
+  shaped the way it is.
+- [AGENTS.md](https://github.com/jbcom/build-preset/blob/main/AGENTS.md): toolchain, invariants not
+  to violate, and doc/test sync obligations for an autonomous coding agent.
+- [CONTRIBUTING.md](https://github.com/jbcom/build-preset/blob/main/CONTRIBUTING.md): local setup,
+  the `pnpm verify` gate, commit and release conventions.

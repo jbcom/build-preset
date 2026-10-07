@@ -1,7 +1,28 @@
 # Changelog
 
-This package is versioned independently from Little Legends through the repository's
-Release Please manifest.
+## [0.4.0](https://github.com/jbcom/build-preset/releases/tag/v0.4.0) (2026-10-07)
+
+First release on npmjs, as the unscoped `build-preset`. Earlier versions were published as
+`@arcade-cabinet/build-preset` to a private registry and are listed below for history.
+
+### Features
+
+* accept Vitest 5 alongside Vitest 4 for the browser fragments and the peers
+* add `build-preset/tsup` (`libraryBuild`), folded in from a duplicate preset; `tsup` is an optional peer
+* ship with npm provenance, published from GitHub Actions through npm trusted publishing
+
+### Bug Fixes
+
+* merge nested Capacitor overrides (`server`, `android`, `ios` and per-plugin options) instead of replacing them
+
+### Breaking Changes
+
+* the package is named `build-preset`; the `@arcade-cabinet/build-preset` name is not published to npmjs
+* the `private-package-release` and `dependency-current` exports and the `package-release` and
+  `dependency-current` CLI commands are removed, together with their ten runtime dependencies
+* `dist` is split into `dist/esm` and `dist/cjs` with format-correct declarations; use the
+  documented `exports` entry points rather than deep paths
+* the package is MIT licensed
 
 ## 0.3.0
 
@@ -12,12 +33,12 @@ Release Please manifest.
 - Added the ESM-only `dependency-current` policy engine and CLI for public runtime
   closures and exact private/framework boundaries, with frozen per-owner install
   proof, canonical JSON evidence, graph/body limits, no redirects, and narrowly
-  scoped `@jbcom` authentication.
+  scoped authentication.
 - Hardened release filesystem paths, clean generated-output reconstruction,
   immutable Git source checks, regular-blob common inputs, exact pack
-  membership, Gitea origin, create-release responses and annotated-tag
-  resolution, npm `latest` publication, script suppression, anonymous evidence
-  generation, and packed-consumer coverage for the new API and CLI surfaces.
+  membership, create-release responses and annotated-tag resolution, npm
+  `latest` publication, script suppression, anonymous evidence generation, and
+  packed-consumer coverage for the new API and CLI surfaces.
 - Made anonymous builds and SBOM profiling export the already-selected exact pnpm
   into a verifier-owned Corepack cache, then execute with Corepack networking and
   ambient home/config overrides disabled.
@@ -42,4 +63,4 @@ Release Please manifest.
 ## 0.1.0
 
 - Extracted the shared Vite, Vitest, Capacitor, TypeScript, and Biome configuration
-  boundaries from Little Legends.
+  boundaries from the project that first used them.

@@ -1,73 +1,86 @@
-# Decisions
+---
+title: Decisions
+description: Why the package is shaped the way it is, with the reasoning behind each choice.
+---
 
-## 2026-10-07: moved out of little-legends into its own repository
+## 2026-10-07: open source, unscoped on npm, single package at the root
 
-**Decision.** `@arcade-cabinet/build-preset` left `little-legends/packages/build-preset` for
-`arcade-cabinet/build-preset`, with its history (`git filter-repo --path packages/build-preset`,
-which also carried the two open pull-request branches, Vitest 5 peers and nested Capacitor
-overrides). little-legends and every other fleet game consume it from the registry.
+**Decision.** The package publishes to npmjs as `build-preset` from `github.com/jbcom/build-preset`,
+MIT licensed, as a single package at the repository root. The first npm release is `0.4.0`.
 
-**Why.** The owner: "You shouldn't need other games as dependencies for shared packages." About
-twenty games build through this package; its source, releases and open work were all gated on one
-game's CI and lockfile.
+**Why.** The name was free on npmjs, and a scoped name would tie a general-purpose build preset to
+one organisation. The previous layout kept the package in `packages/build-preset` behind a private
+root harness that installed the package as its own verifier. That harness existed only to satisfy
+the old release tool, so a plain root package is simpler to read, build, pack and contribute to.
 
-## The package stays at `packages/build-preset` behind a private root harness
+## The private-registry release governance was dropped
 
-The package ships its own release governance, and `package-release` refuses to publish unless the
-workspace root declares the package as a dependency that pnpm links to the executing package root.
-A package cannot depend on itself, so a package-at-root layout would need the governance rewritten.
-Keeping the package in `packages/build-preset` with a private root that depends on it keeps that
-check, every `../..` path in the tests and consumer smoke, and the release config unchanged.
+**Decision.** The private-package-release verifier, its SBOM admission profile, the release
+attestation scripts, the manually dispatched publish workflow, and the `package-release` and
+`dependency-current` commands and exports were removed. Publishing is now Release Please plus a
+`publish` job that runs `npm publish --provenance` from GitHub Actions with npm trusted publishing
+(OIDC).
 
-## The root binds the verifier as `workspace:*`
+**Why.** The verifier solved publishing to a private registry safely: exact-source fingerprints,
+reproducible packs, a normalized CycloneDX admission, and idempotent retry of tag, release and
+registry state. On npmjs, provenance attestation binds each tarball to the workflow run and commit
+that built it, which is the same guarantee from the registry's side, with no token to protect. The
+verifier also pinned an exact Node and pnpm patch version and refused any other toolchain, which
+conflicts with a CI matrix over Node 24 and 26 and with a package any contributor can build.
+`dependency-current` was tied to the same design (private scopes, a fixed private registry route,
+a bespoke token variable), pulled ten runtime dependencies into a configuration package, and has no
+meaning outside that registry. Removing both leaves the package with no runtime dependencies.
 
-little-legends bound it as `workspace:<version>` and bumped that spec, the manifest and the package
-version by hand in feature PRs. Here release-please owns the version, and a release PR that changed
-the root spec would also need a lockfile change it cannot make. The verifier now also accepts
-`workspace:*`. That is as exact as before: a linked verifier must still resolve to the executing
-package root and carry the exact version being released. A test pins that any other workspace
-range is refused.
+**Consequence.** Existing users of the `build-preset package-release` or `build-preset
+dependency-current` commands must keep the last version that shipped them. The configuration
+entry points (`vite`, `vitest`, `capacitor`, the base configs, `init-android`) are unchanged apart
+from the package name and the `dist` layout.
 
-## The release design is ported, not replaced
+## The `tsup` entry point was folded in from a duplicate preset
 
-Other fleet packages publish with release-please plus a reconcile job. This one keeps its own
-stricter pipeline, because the pipeline is the product: an exact-main, green-CI gated
-`publish.yml` (workflow dispatch) runs the package's `package-release` CLI, which packs twice,
-admits the SBOM, publishes, and creates the tag, release and assets itself. release-please only
-plans versions, and stays closed until the current version's tag, release, assets and registry
-bytes verify. Tags keep the `build-preset-v` prefix, so the lineage from little-legends continues.
+**Decision.** `build-preset/tsup` exports `libraryBuild`, and `tsup` is an optional peer.
 
-## The toolchain stays Node 24.19.0 and pnpm 11.21.0 for now
+**Why.** A second, unpublished preset package carried the same Vite, Vitest, tsconfig and Biome
+code (the Vite module was byte-identical and its Vitest module was an older copy of this one) plus
+one thing this package lacked: a tsup library build whose banner is derived from the package name and
+which routes JSX through `esbuildOptions`. That is a real capability, so it moved here with tests
+and the duplicate has no reason to exist. The entry point stays out of the barrel so that a project
+that never builds a library does not need tsup's types.
 
-The governance pins that exact toolchain (`toolchain.mjs`, `corepack-environment.mjs`, the SBOM
-admission profile name), and its own tests assert it. Moving the fleet to Node 26 and pnpm 12 is
-a product change to that governance, not part of a repository move; it is tracked as an issue
-here.
+## The toolchain is Node 26, pnpm 12, TypeScript 7
 
-## The SBOM admission was re-profiled
+**Decision.** `.nvmrc` and `mise.toml` pin Node 26 and pnpm 12, TypeScript is 7, and `engines.node`
+is `>=24`. CI verifies Node 24 and 26 on Linux and Node 26 on Windows (the package normalizes
+Windows paths).
 
-The standalone lockfile resolves the same production graph shape (32 components, 33 edges) with
-fresher transitive versions, so the identity hashes changed. The admission was regenerated with
-`package-release profile-sbom` on a clean HEAD, and the SBOM test now reads the committed
-admission instead of keeping a second copy.
+**Why.** Node 24 is the oldest line still in maintenance, and a preset that cannot be built on the
+current line has nothing to offer. TypeScript 7 removed `node10` module resolution, so the
+CommonJS build uses `moduleResolution: bundler`. Dev dependencies track current releases rather than
+exact old pins; the peer ranges (Vite `^8.2.1`, Vitest 4 or 5, Playwright `>=1.62.1 <2`) are the
+compatibility promise and the packed-consumer smoke checks both Vitest majors.
 
-## Host-only proofs stayed in little-legends
+## The dual build matches the house layout
 
-`tests/host-dogfood.test.ts` asserted little-legends' own Vite config, and the headed runtime-mute
-browser contract tests little-legends' audio engine. Both test the host, so they remain there
-against the registry package. The package's own fresh anonymous headed consumer smoke runs in this
-repository's CI.
+**Decision.** `dist/esm` (ESM and `.d.ts`) and `dist/cjs` (`.cjs` and `.d.cts`), a `typesVersions`
+fallback, and a `{ "type": "commonjs" }` manifest inside `dist/cjs`.
 
-## A root LICENSE is a release input
+**Why.** The earlier flat layout pointed the `require` condition at an ESM-typed declaration file,
+which Are The Types Wrong reports as masquerading as ESM. Separate declarations per format fix it,
+and the layout now matches the sibling packages so one build script serves all of them.
 
-`package-release` binds the root `LICENSE` as a release input. The package is `UNLICENSED`, and the
-repository carries the same proprietary notice little-legends did.
+## The headed-browser consumer smoke stays
 
-## Commits dated before the last release are restated
+**Decision.** `scripts/consumer-smoke.mjs` installs the packed tarball into an empty project against
+the public registry only, loads every entry point under ESM and CommonJS, type-checks, builds with
+Vite, and with `BUILD_PRESET_RUN_BROWSER=1` launches real headed Chromium and checks the process
+arguments (`--mute-audio` present, `--headless` absent). CI runs it once per Vitest major.
 
-The Gitea release-please action walks commits newest-first by date and stops at the last release
-commit. Branches started before the move (the Vitest 5 peers and the nested Capacitor overrides,
-both dated 2026-10-06) merged after the `build-preset-v0.3.0` tag commit (2026-10-07), so the walk
-stopped before reaching them and proposed 0.3.1 instead of 0.4.0. A forward commit restates both
-changes as release-please body entries. To avoid it, rebase a branch whose commits predate the
-latest release before merging it; the rebase refreshes the committer dates.
+**Why.** The browser fragment's whole value is a contract about how Chromium is launched. Unit tests
+of the returned object cannot prove the launched process honours it. CI installs Chromium with
+`playwright install --with-deps --no-shell chromium` and runs the headed smoke under `xvfb-run`.
+
+## Commits dated before a release can be missed by Release Please
+
+Release Please walks commits newest-first by date and stops at the last release commit. A branch
+started before a release but merged after it can fall outside that walk and be omitted from the
+release notes. Rebase such a branch before merging; the rebase refreshes the committer dates.
