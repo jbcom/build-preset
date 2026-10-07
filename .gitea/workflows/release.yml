@@ -145,8 +145,9 @@ jobs:
 
           const registryBase =
             `${process.env.GITEA_SERVER_URL}/api/packages/arcade-cabinet/npm/`;
+          // npm's own spelling: escape only the slash. The registry 404s a `%40`-encoded scope.
           const registryResponse = await fetch(
-            `${registryBase}${encodeURIComponent(packageName)}`,
+            `${registryBase}${encodeURIComponent(packageName).replace(/^%40/u, '@')}`,
           );
           if (!registryResponse.ok) {
             throw new Error(
