@@ -1,11 +1,6 @@
 node_modules/
 dist/
 coverage/
-*.tsbuildinfo
 *.tgz
-.agent-state/digest.md
-.agent-state/cursor.md
-.agent-state/.indexed-sha
-.agent-state/.last-stop-sha
-.agent-state/.last-compaction
-.agent-state/batch.json
+.DS_Store
+docs/dist/

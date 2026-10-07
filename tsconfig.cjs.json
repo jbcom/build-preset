@@ -2,9 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
-    "verbatimModuleSyntax": false,
-    "declaration": false,
-    "declarationMap": false,
-    "outDir": "dist/cjs"
-  }
+    "moduleResolution": "bundler",
+    "noEmit": false,
+    "outDir": "dist/cjs",
+    "rootDir": "src",
+    "verbatimModuleSyntax": false
+  },
+  "include": ["src"],
+  "exclude": ["src/cli.ts"]
 }

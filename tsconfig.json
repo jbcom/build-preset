@@ -6,19 +6,17 @@
     "moduleResolution": "bundler",
     "declaration": true,
     "declarationMap": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "skipLibCheck": true,
     "isolatedModules": true,
     "moduleDetection": "force",
+    "skipLibCheck": true,
+    "types": ["node"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "types": ["node"]
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
   },
-  "include": ["src"],
-  "exclude": ["dist", "tests"]
+  "include": ["src", "tests", "vitest.config.ts"]
 }
