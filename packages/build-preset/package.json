@@ -1,16 +1,16 @@
 {
   "name": "@arcade-cabinet/build-preset",
   "version": "0.3.0",
-  "description": "Shared Vite/tsconfig/Biome/Capacitor/Vitest build-config conventions for arcade-cabinet fleet games, extracted from little-legends.",
+  "description": "Shared Vite/tsconfig/Biome/Capacitor/Vitest build-config conventions and private-package release governance for arcade-cabinet fleet games.",
   "type": "module",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jbcom/little-legends.git",
+    "url": "https://github.com/jbcom/build-preset.git",
     "directory": "packages/build-preset"
   },
   "bugs": {
-    "url": "https://github.com/jbcom/little-legends/issues"
+    "url": "https://github.com/jbcom/build-preset/issues"
   },
   "engines": {
     "node": ">=24.0.0"

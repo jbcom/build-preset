@@ -339,7 +339,11 @@ export async function assertVerifierDependencyBinding({
   if (specs.length !== 1) {
     throw new Error(`root manifest must declare exactly one ${verifier.packageName} dependency`);
   }
-  if (![verifier.version, `workspace:${verifier.version}`].includes(specs[0])) {
+  // `workspace:*` is how the package's own repository binds it: the exact version lives in the
+  // package manifest alone, so a release bump never rewrites the root spec and its lockfile. It is
+  // as exact as `workspace:<version>` because a linked verifier must also resolve to the executing
+  // package root and carry this exact version (checked below).
+  if (![verifier.version, `workspace:${verifier.version}`, "workspace:*"].includes(specs[0])) {
     throw new Error(
       `root manifest verifier spec ${specs[0]} does not exactly bind ${verifier.version}`,
     );
@@ -401,7 +405,7 @@ export async function assertVerifierDependencyBinding({
   const linked =
     typeof installed.version === "string" && /^(?:link|workspace):/u.test(installed.version);
   if (linked) {
-    if (specs[0] !== `workspace:${verifier.version}`) {
+    if (![`workspace:${verifier.version}`, "workspace:*"].includes(specs[0])) {
       throw new Error("linked verifier requires the exact matching workspace root spec");
     }
   } else if (installed.version !== verifier.version) {
