@@ -9,7 +9,7 @@ description: Install build-preset and wire up Vite, Vitest, TypeScript and Biome
 pnpm add -D build-preset vite vitest @vitest/browser-playwright playwright
 ```
 
-Use Node.js 24 or newer. `vite`, `vitest`, `@vitest/browser-playwright` and `playwright` are peer
+Use a maintained Node.js line: 22, 24 or 26. `vite`, `vitest`, `@vitest/browser-playwright` and `playwright` are peer
 dependencies, so the project controls their versions. Install `tsup` too only if you use the
 library build. The package ships native ESM and CommonJS entry points with format-correct
 TypeScript declarations.
