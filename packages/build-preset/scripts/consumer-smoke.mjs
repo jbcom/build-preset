@@ -8,7 +8,6 @@ import { fileURLToPath } from "node:url";
 import { createAnonymousEnvironment } from "../private-package-release/anonymous-environment.mjs";
 
 const packageRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const repositoryRoot = path.resolve(packageRoot, "../..");
 const packageJson = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
 const pnpmCli = process.env.npm_execpath;
 const requestedSource = process.env.BUILD_PRESET_CONSUMER_SOURCE;
@@ -371,9 +370,9 @@ export default defineConfig({
   if (runBrowser) {
     execFileSync(
       process.execPath,
-      [path.join(repositoryRoot, "scripts/verify-build-preset-browser.mjs")],
+      [path.join(packageRoot, "scripts/verify-build-preset-browser.mjs")],
       {
-        cwd: repositoryRoot,
+        cwd: packageRoot,
         env: {
           ...anonymousEnvironment,
           BUILD_PRESET_BROWSER_CWD: scratch,

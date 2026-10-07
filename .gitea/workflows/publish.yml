@@ -90,7 +90,7 @@ jobs:
           pnpm install --lockfile-only
           git diff --exit-code pnpm-lock.yaml
       - name: Install headed Chromium
-        run: pnpm exec playwright install --with-deps --no-shell chromium
+        run: pnpm --filter @arcade-cabinet/build-preset exec playwright install --with-deps --no-shell chromium
       - id: package
         name: Preflight the immutable registry and release transition
         env:
