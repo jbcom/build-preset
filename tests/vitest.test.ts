@@ -79,7 +79,7 @@ describe("defineBrowserTest", () => {
 });
 
 describe("defaultBrowserLaunchArgs", () => {
-  it("returns the fleet-standard GPU/ANGLE args with no extras", () => {
+  it("returns the standard GPU/ANGLE args with no extras", () => {
     expect(defaultBrowserLaunchArgs()).toEqual([
       "--mute-audio",
       "--enable-gpu",

@@ -1,12 +1,11 @@
 import path from "node:path";
-import { mergeConfig, normalizePath, type PluginOption, type UserConfig } from "vite";
+import { mergeConfig, type PluginOption, type UserConfig } from "vite";
 
 /**
  * Known-gotcha heavy dependencies that need co-chunking / optimizeDeps care.
- * Toggling one of these on wires in the fix the fleet has already rediscovered
- * per-repo (see blobolines' vite.config.ts for the three.js/Rapier war story
- * and little-legends' vitest.browser.config.ts for the declarative-hex-worlds
- * mid-run re-bundle fix this preset generalizes).
+ * Toggling one of these on wires in the fix that browser games otherwise
+ * rediscover one repository at a time (the three.js and Rapier chunking
+ * boundary, and the mid-run dependency re-bundle).
  */
 export interface HeavyDepsOptions {
   /** three.js: dedupe + its own Rolldown code-splitting group + optimizeDeps.include. */
@@ -95,15 +94,14 @@ function buildCodeSplittingGroups(heavyDeps: HeavyDepsOptions): CodeSplittingGro
 
 function sourceAlias(srcDir: string | undefined): Record<string, string> | undefined {
   if (srcDir === undefined) return undefined;
-  if (!path.isAbsolute(srcDir) && !path.win32.isAbsolute(srcDir)) {
+  // win32 absolute-ness is a superset of POSIX absolute-ness ("/x" is absolute in both), so one
+  // check accepts a POSIX or a Windows path whichever platform evaluates the config.
+  if (!path.win32.isAbsolute(srcDir)) {
     throw new TypeError(
       `defineGamePreset srcDir must be an absolute filesystem path; received ${JSON.stringify(srcDir)}`,
     );
   }
-  const normalized = path.win32.isAbsolute(srcDir)
-    ? srcDir.replaceAll("\\", "/")
-    : normalizePath(srcDir);
-  return { "@": normalized };
+  return { "@": srcDir.replaceAll("\\", "/") };
 }
 
 interface CodeSplittingShape {
@@ -152,9 +150,9 @@ function reconcileNamedCodeSplittingGroups(config: UserConfig): UserConfig {
 }
 
 /**
- * Base Vite config factory encoding the fleet's shared build conventions:
+ * Base Vite config factory encoding shared browser-game build conventions:
  * env-switched `base`, heavy-dep co-chunking fixes, and HMR watch-ignore
- * globs — merging caller overrides last so any repo can fully escape-hatch.
+ * globs, merging caller overrides last so any project can fully escape-hatch.
  */
 export function defineGamePreset(options: DefineGamePresetOptions): UserConfig {
   const {

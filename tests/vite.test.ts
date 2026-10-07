@@ -13,28 +13,28 @@ describe("defineGamePreset", () => {
 
   it("defaults base to / with no env set", () => {
     resetEnv();
-    const config = defineGamePreset({ appName: "kuroga" });
+    const config = defineGamePreset({ appName: "example-game" });
     expect(config.base).toBe("/");
   });
 
   it("derives GitHub Pages base from appName when GITHUB_PAGES=true", () => {
     resetEnv();
     process.env.GITHUB_PAGES = "true";
-    const config = defineGamePreset({ appName: "kuroga" });
-    expect(config.base).toBe("/kuroga/");
+    const config = defineGamePreset({ appName: "example-game" });
+    expect(config.base).toBe("/example-game/");
   });
 
   it("uses / when CAPACITOR=true even if GITHUB_PAGES is also set", () => {
     resetEnv();
     process.env.CAPACITOR = "true";
-    const config = defineGamePreset({ appName: "kuroga" });
+    const config = defineGamePreset({ appName: "example-game" });
     expect(config.base).toBe("/");
   });
 
   it("explicit base option wins over every env derivation", () => {
     resetEnv();
     process.env.VITE_BASE = "/from-env/";
-    const config = defineGamePreset({ appName: "kuroga", base: "/explicit/" });
+    const config = defineGamePreset({ appName: "example-game", base: "/explicit/" });
     expect(config.base).toBe("/explicit/");
   });
 
@@ -42,40 +42,43 @@ describe("defineGamePreset", () => {
     resetEnv();
     process.env.VITE_BASE = "/from-env/";
     process.env.CAPACITOR = "true";
-    const config = defineGamePreset({ appName: "kuroga" });
+    const config = defineGamePreset({ appName: "example-game" });
     expect(config.base).toBe("/from-env/");
   });
 
   it("always dedupes react/react-dom, plus caller-supplied dedupe entries", () => {
-    const config = defineGamePreset({ appName: "kuroga", dedupe: ["koota", "three"] });
+    const config = defineGamePreset({ appName: "example-game", dedupe: ["koota", "three"] });
     expect(config.resolve?.dedupe).toEqual(["react", "react-dom", "koota", "three"]);
   });
 
   it("safely omits the @ alias when srcDir is not explicit", () => {
-    const config = defineGamePreset({ appName: "kuroga" });
+    const config = defineGamePreset({ appName: "example-game" });
     expect(config.resolve?.alias).toBeUndefined();
   });
 
   it("honors an explicit absolute srcDir for the @ alias", () => {
-    const config = defineGamePreset({ appName: "kuroga", srcDir: "/workspace/game/src" });
+    const config = defineGamePreset({ appName: "example-game", srcDir: "/workspace/game/src" });
     const alias = config.resolve?.alias as Record<string, string>;
     expect(alias["@"]).toBe("/workspace/game/src");
   });
 
   it("normalizes an absolute Windows srcDir for Vite", () => {
-    const config = defineGamePreset({ appName: "kuroga", srcDir: "C:\\games\\kuroga\\src" });
+    const config = defineGamePreset({
+      appName: "example-game",
+      srcDir: "C:\\games\\example-game\\src",
+    });
     const alias = config.resolve?.alias as Record<string, string>;
-    expect(alias["@"]).toBe("C:/games/kuroga/src");
+    expect(alias["@"]).toBe("C:/games/example-game/src");
   });
 
   it("rejects relative srcDir aliases", () => {
-    expect(() => defineGamePreset({ appName: "kuroga", srcDir: "./src" })).toThrow(
+    expect(() => defineGamePreset({ appName: "example-game", srcDir: "./src" })).toThrow(
       /srcDir must be an absolute filesystem path/,
     );
   });
 
   it("wires three.js optimizeDeps.include and a Rolldown code-splitting group", () => {
-    const config = defineGamePreset({ appName: "kuroga", heavyDeps: { three: true } });
+    const config = defineGamePreset({ appName: "example-game", heavyDeps: { three: true } });
     expect(config.optimizeDeps?.include).toContain("three");
     const output = config.build?.rolldownOptions?.output as
       | { codeSplitting?: { groups?: Array<{ name: string; test: RegExp }> } }
@@ -85,7 +88,7 @@ describe("defineGamePreset", () => {
 
   it("groups three and Rapier paths into the same vendor boundary", () => {
     const config = defineGamePreset({
-      appName: "kuroga",
+      appName: "example-game",
       heavyDeps: { three: true, rapier: true },
     });
     const output = config.build?.rolldownOptions?.output as
@@ -104,12 +107,12 @@ describe("defineGamePreset", () => {
   });
 
   it("excludes rapier from optimizeDeps (async WASM init can't be pre-bundled)", () => {
-    const config = defineGamePreset({ appName: "kuroga", heavyDeps: { rapier: true } });
+    const config = defineGamePreset({ appName: "example-game", heavyDeps: { rapier: true } });
     expect(config.optimizeDeps?.exclude).toContain("@dimforge/rapier3d-compat");
   });
 
   it("groups Phaser into its own Rolldown vendor boundary", () => {
-    const config = defineGamePreset({ appName: "kuroga", heavyDeps: { phaser: true } });
+    const config = defineGamePreset({ appName: "example-game", heavyDeps: { phaser: true } });
     const output = config.build?.rolldownOptions?.output as
       | { codeSplitting: { groups: Array<{ name: string; test: RegExp }> } }
       | undefined;
@@ -120,13 +123,13 @@ describe("defineGamePreset", () => {
   });
 
   it("omits optimizeDeps/build entirely when no heavyDeps are set", () => {
-    const config = defineGamePreset({ appName: "kuroga" });
+    const config = defineGamePreset({ appName: "example-game" });
     expect(config.optimizeDeps).toBeUndefined();
     expect(config.build).toBeUndefined();
   });
 
   it("merges default watch-ignore globs with caller-supplied extras", () => {
-    const config = defineGamePreset({ appName: "kuroga", watchIgnore: ["**/coverage/**"] });
+    const config = defineGamePreset({ appName: "example-game", watchIgnore: ["**/coverage/**"] });
     const ignored = config.server?.watch?.ignored as string[];
     expect(ignored).toContain("**/diagnostics/**");
     expect(ignored).toContain("**/test-results/**");
@@ -137,7 +140,7 @@ describe("defineGamePreset", () => {
     const pluginA: Plugin = { name: "a" };
     const pluginB: Plugin = { name: "b" };
     const config = defineGamePreset({
-      appName: "kuroga",
+      appName: "example-game",
       plugins: [pluginA, pluginB],
     });
     expect(config.plugins?.map((p) => (p as Plugin).name)).toEqual(["a", "b"]);
@@ -147,7 +150,7 @@ describe("defineGamePreset", () => {
     const base: Plugin = { name: "base" };
     const extra: Plugin = { name: "extra" };
     const config = defineGamePreset({
-      appName: "kuroga",
+      appName: "example-game",
       plugins: [base],
       overrides: { plugins: [extra] },
     });
@@ -156,7 +159,7 @@ describe("defineGamePreset", () => {
 
   it("deep-merges caller overrides without erasing preset-owned nested config", () => {
     const config = defineGamePreset({
-      appName: "kuroga",
+      appName: "example-game",
       srcDir: "/workspace/game/src",
       heavyDeps: { three: true },
       overrides: {
@@ -185,7 +188,7 @@ describe("defineGamePreset", () => {
       test: /caller-three/,
     };
     const config = defineGamePreset({
-      appName: "kuroga",
+      appName: "example-game",
       heavyDeps: { three: true },
       overrides: {
         build: {
@@ -208,5 +211,45 @@ describe("defineGamePreset", () => {
       "game-vendor",
     ]);
     expect(output.codeSplitting.groups[0]).toBe(callerGroup);
+  });
+
+  it("leaves a caller's non-object or group-less rolldown output untouched", () => {
+    const arrayOutput = [{ entryFileNames: "a.js" }];
+    const withArray = defineGamePreset({
+      appName: "example-game",
+      overrides: { build: { rolldownOptions: { output: arrayOutput } } },
+    });
+    expect(withArray.build?.rolldownOptions?.output).toEqual(arrayOutput);
+
+    const withoutGroups = defineGamePreset({
+      appName: "example-game",
+      overrides: { build: { rolldownOptions: { output: { entryFileNames: "b.js" } } } },
+    });
+    expect(withoutGroups.build?.rolldownOptions?.output).toEqual({ entryFileNames: "b.js" });
+
+    const withoutOutput = defineGamePreset({ appName: "example-game" });
+    expect(withoutOutput.build?.rolldownOptions?.output).toBeUndefined();
+  });
+
+  it("keeps caller code-splitting groups that have no name, in order", () => {
+    // The type requires a name; a JavaScript caller can omit it, and that is what is under test.
+    const anonymous = { test: /anonymous/ } as unknown as { name: string; test: RegExp };
+    const config = defineGamePreset({
+      appName: "example-game",
+      heavyDeps: { phaser: true },
+      overrides: {
+        build: {
+          rolldownOptions: {
+            output: { codeSplitting: { groups: [anonymous, anonymous] } },
+          },
+        },
+      },
+    });
+    const output = config.build?.rolldownOptions?.output as
+      | { codeSplitting: { groups: unknown[] } }
+      | undefined;
+    if (!output) throw new Error("expected code-splitting output");
+    expect(output.codeSplitting.groups).toHaveLength(3);
+    expect(output.codeSplitting.groups.slice(1)).toEqual([anonymous, anonymous]);
   });
 });

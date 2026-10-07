@@ -12,10 +12,10 @@ describe("defineCapacitorPreset", () => {
   });
 
   it("builds a config object with the expected shape and defaults", () => {
-    const config = defineCapacitorPreset({ appId: "com.jbcom.kuroga", appName: "Kuroga" });
+    const config = defineCapacitorPreset({ appId: "com.example.game", appName: "Example Game" });
     expect(config).toMatchObject({
-      appId: "com.jbcom.kuroga",
-      appName: "Kuroga",
+      appId: "com.example.game",
+      appName: "Example Game",
       webDir: "dist",
       server: { androidScheme: "https" },
       android: {
@@ -27,21 +27,21 @@ describe("defineCapacitorPreset", () => {
   });
 
   it("defaults webContentsDebuggingEnabled to false when CAP_DEBUG is unset", () => {
-    const config = defineCapacitorPreset({ appId: "com.jbcom.kuroga", appName: "Kuroga" });
+    const config = defineCapacitorPreset({ appId: "com.example.game", appName: "Example Game" });
     expect((config.android as Record<string, unknown>).webContentsDebuggingEnabled).toBe(false);
   });
 
   it("enables webContentsDebuggingEnabled when CAP_DEBUG=true", () => {
     process.env.CAP_DEBUG = "true";
-    const config = defineCapacitorPreset({ appId: "com.jbcom.kuroga", appName: "Kuroga" });
+    const config = defineCapacitorPreset({ appId: "com.example.game", appName: "Example Game" });
     expect((config.android as Record<string, unknown>).webContentsDebuggingEnabled).toBe(true);
   });
 
   it("honors a custom debugEnvVar name", () => {
     process.env.MY_DEBUG_FLAG = "true";
     const config = defineCapacitorPreset({
-      appId: "com.jbcom.kuroga",
-      appName: "Kuroga",
+      appId: "com.example.game",
+      appName: "Example Game",
       debugEnvVar: "MY_DEBUG_FLAG",
     });
     expect((config.android as Record<string, unknown>).webContentsDebuggingEnabled).toBe(true);
@@ -49,34 +49,37 @@ describe("defineCapacitorPreset", () => {
 
   it("includes backgroundColor only when provided", () => {
     const withColor = defineCapacitorPreset({
-      appId: "com.jbcom.kuroga",
-      appName: "Kuroga",
+      appId: "com.example.game",
+      appName: "Example Game",
       backgroundColor: "#261f1a",
     });
     expect(withColor.backgroundColor).toBe("#261f1a");
 
-    const withoutColor = defineCapacitorPreset({ appId: "com.jbcom.kuroga", appName: "Kuroga" });
+    const withoutColor = defineCapacitorPreset({
+      appId: "com.example.game",
+      appName: "Example Game",
+    });
     expect(withoutColor.backgroundColor).toBeUndefined();
   });
 
   it("caller overrides win over preset defaults", () => {
     const config = defineCapacitorPreset({
-      appId: "com.jbcom.kuroga",
-      appName: "Kuroga",
+      appId: "com.example.game",
+      appName: "Example Game",
       overrides: { webDir: "build" },
     });
     expect(config.webDir).toBe("build");
   });
 
   describe("nested overrides", () => {
-    const base = { appId: "com.jbcom.kuroga", appName: "Kuroga" };
+    const base = { appId: "com.example.game", appName: "Example Game" };
 
     it("keeps server.androidScheme when overrides.server only sets another key", () => {
       const config = defineCapacitorPreset({
         ...base,
-        overrides: { server: { hostname: "kuroga.local" } },
+        overrides: { server: { hostname: "game.local" } },
       });
-      expect(config.server).toEqual({ androidScheme: "https", hostname: "kuroga.local" });
+      expect(config.server).toEqual({ androidScheme: "https", hostname: "game.local" });
     });
 
     it("keeps allowMixedContent and the debug-derived flag when overrides.android sets another key", () => {

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -52,9 +53,21 @@ function fixtureBuild(root: string) {
   };
 }
 
-describe("Vite 8.2 conformance", () => {
-  it("executes against the exact supported Vite line", () => {
-    expect(viteVersion).toBe("8.2.1");
+describe("Vite conformance", () => {
+  it("executes against a Vite release the peer range accepts", () => {
+    const range = JSON.parse(
+      readFileSync(path.resolve(import.meta.dirname, "../package.json"), "utf8"),
+    ).peerDependencies.vite;
+    const floor = /^\^(\d+)\.(\d+)\.(\d+)$/.exec(range)?.slice(1).map(Number);
+    expect(floor, `peer range ${range} must be a caret range`).toBeDefined();
+    const [major, minor, patch] = (floor ?? []) as [number, number, number];
+    const [actualMajor, actualMinor, actualPatch] = viteVersion.split(".").map(Number) as [
+      number,
+      number,
+      number,
+    ];
+    expect(actualMajor).toBe(major);
+    expect(actualMinor > minor || (actualMinor === minor && actualPatch >= patch)).toBe(true);
   });
 
   it("builds a default-root fixture without inventing an @ alias", async () => {
@@ -114,7 +127,7 @@ describe("Vite 8.2 conformance", () => {
     const root = await mkdtemp(path.join(tmpdir(), "build-preset-vite82-windows-"));
     try {
       const realMessage = path.join(root, "windows-message.js");
-      const windowsSource = "C:\\fixtures\\kuroga\\src";
+      const windowsSource = "C:\\fixtures\\example-game\\src";
       const normalizedMessage = `${windowsSource.replaceAll("\\", "/")}/message.js`;
       const observedIds: string[] = [];
       const windowsFixtureResolver: Plugin = {

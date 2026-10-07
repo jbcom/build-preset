@@ -1,11 +1,11 @@
 export interface DefineCapacitorPresetOptions {
-  /** Reverse-DNS app id, e.g. "com.jbcom.littlelegends". */
+  /** Reverse-DNS app id, e.g. "com.example.game". */
   appId: string;
   /** Human-readable app name shown on the device. */
   appName: string;
   /**
-   * Env var name gating WebView debugging (little-legends pattern,
-   * generalized). Reads `process.env[debugEnvVar] === "true"`.
+   * Env var name gating WebView debugging. Reads
+   * `process.env[debugEnvVar] === "true"`.
    * Defaults to "CAP_DEBUG".
    */
   debugEnvVar?: string;
@@ -119,11 +119,10 @@ function mergePlugins(base: unknown, override: unknown): unknown {
 /**
  * Generates the CI-parameterized versionName/versionCode override block
  * consumers should apply to their `android/app/build.gradle` `defaultConfig`
- * after running `cap add android` / `cap sync android`. Ported from the
- * legacy arcade-cabinet shell's
+ * after running `cap add android` / `cap sync android`. It follows the
  * `-PversionName=$npm_package_version -PversionCode=${ANDROID_VERSION_CODE:-1}`
- * convention, which little-legends's own android/app/build.gradle lacked
- * (hardcoded `versionCode 1` / `versionName "1.0"`).
+ * convention, which the generated build.gradle lacks (it hardcodes
+ * `versionCode 1` / `versionName "1.0"`).
  */
 export function androidVersionGradleSnippet(): string {
   return [
