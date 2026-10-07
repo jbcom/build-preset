@@ -138,10 +138,7 @@ describe("release boundary", () => {
   });
 
   it("keeps publish and release planning bound to exact anonymous evidence", () => {
-    const publish = readFileSync(
-      path.join(repositoryRoot, ".gitea/workflows/publish-build-preset.yml"),
-      "utf8",
-    );
+    const publish = readFileSync(path.join(repositoryRoot, ".gitea/workflows/publish.yml"), "utf8");
     const ci = readFileSync(path.join(repositoryRoot, ".gitea/workflows/ci.yml"), "utf8");
     const release = readFileSync(path.join(repositoryRoot, ".gitea/workflows/release.yml"), "utf8");
     expect(publish).toContain("dependency-current.json");
@@ -175,7 +172,7 @@ describe("release boundary", () => {
   });
 
   it("pins Linux workflow jobs so macOS host labels cannot claim them", () => {
-    for (const workflow of ["ci.yml", "cd.yml", "release.yml", "publish-build-preset.yml"]) {
+    for (const workflow of ["ci.yml", "release.yml", "publish.yml"]) {
       const source = readFileSync(path.join(repositoryRoot, ".gitea/workflows", workflow), "utf8");
       expect(source).not.toContain("runs-on: ubuntu-latest");
       expect(source).toContain("runs-on: ubuntu-24.04");
