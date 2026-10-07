@@ -1,0 +1,36 @@
+name: Bug report
+description: Report reproducible incorrect behavior in build-preset.
+title: "fix: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: For security vulnerabilities, use the private reporting link in SECURITY.md.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest config file that shows the problem and the exact command you ran.
+      render: ts
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: build-preset, Vite, Vitest, Playwright, Node.js, package manager, and operating system.
+      placeholder: build-preset 0.4.0; Vite 8.3; Vitest 5.0; Playwright 1.63; Node 26; pnpm 12; macOS 26
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add the printed config, stack traces, or other useful details.

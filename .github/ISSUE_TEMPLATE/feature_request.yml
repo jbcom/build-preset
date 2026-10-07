@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a focused addition that fits build-preset's scope.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What recurring build or test configuration problem cannot be solved cleanly with the current API?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior
+      description: Show a small usage example and explain why it belongs in a shared preset rather than in one project's config.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe current workarounds and compatibility implications.
+    validations:
+      required: true
