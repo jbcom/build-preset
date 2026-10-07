@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/jbcom/build-preset/compare/v0.4.0...v0.4.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* support every maintained Node line (22, 24 and 26) ([a8cf554](https://github.com/jbcom/build-preset/commit/a8cf554de18f058ee63c12e8ae3a52e3c819e1e2))
+* support maintained Node lines and conform repository CI ([61e0f78](https://github.com/jbcom/build-preset/commit/61e0f78ed61e2f20e6a645c93628665d1f0e1a2a))
+
 ## [0.4.0](https://github.com/jbcom/build-preset/releases/tag/v0.4.0) (2026-10-07)
 
 First release on npmjs, as the unscoped `build-preset`. Earlier versions were published as
