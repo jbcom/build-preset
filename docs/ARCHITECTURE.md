@@ -29,7 +29,9 @@ library never needs its types either.
    process working directory rather than the config file.
 4. **Rolldown groups, not `manualChunks`.** Vite 8 deprecates `manualChunks`. The factory emits
    `codeSplitting.groups` and reconciles same-named groups after `mergeConfig`, because `mergeConfig`
-   concatenates nested arrays and would otherwise keep both definitions.
+   concatenates nested arrays and would otherwise keep both definitions. Caller-named `chunks`
+   come first in the group list, then `heavyDeps` groups: Rolldown gives a module to the matching
+   group with the smaller index, so list order is precedence.
 5. **Capacitor merges are explicit.** Replacing a whole `server` object by accident drops
    `androidScheme`, which breaks the app on Android, so the three platform sections and `plugins`
    merge one level deep and everything else replaces.

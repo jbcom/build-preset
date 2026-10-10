@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import type { Plugin, UserConfig } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
 import { defineGamePreset } from "../src/vite.js";
 
@@ -6,6 +6,19 @@ const ENV_KEYS = ["VITE_BASE", "CAPACITOR", "GITHUB_PAGES"] as const;
 
 function resetEnv() {
   for (const key of ENV_KEYS) delete process.env[key];
+}
+
+interface TestedGroup {
+  name: string;
+  // A RegExp for heavyDeps groups, a function for chunks.
+  test: RegExp & ((id: string) => boolean);
+}
+
+function rolldownGroups(config: UserConfig): TestedGroup[] {
+  const output = config.build?.rolldownOptions?.output as
+    | { codeSplitting?: { groups?: TestedGroup[] } }
+    | undefined;
+  return output?.codeSplitting?.groups ?? [];
 }
 
 describe("defineGamePreset", () => {
@@ -120,6 +133,128 @@ describe("defineGamePreset", () => {
     const group = output.codeSplitting.groups.find(({ name }) => name === "phaser-vendor");
     expect(group?.test.test("/repo/node_modules/phaser/dist/phaser.js")).toBe(true);
     expect(group?.test.test("C:\\repo\\node_modules\\phaser\\dist\\phaser.js")).toBe(true);
+  });
+
+  it("emits exactly the same config for heavyDeps as before vendor chunks existed", () => {
+    // Golden: pinned from the preset before `chunks` was added. A consumer that never passes
+    // `chunks` must see no change at all, so this compares the whole derived config.
+    const config = defineGamePreset({
+      appName: "example-game",
+      heavyDeps: { three: true, rapier: true, phaser: true },
+    });
+    expect(config.optimizeDeps).toEqual({
+      include: ["three"],
+      exclude: ["@dimforge/rapier3d-compat"],
+    });
+    expect(config.build).toEqual({
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: "three-vendor",
+                test: /[\\/]node_modules[\\/](?:three|@dimforge[\\/]rapier3d-compat)(?:[\\/]|$)/,
+              },
+              { name: "phaser-vendor", test: /[\\/]node_modules[\\/]phaser(?:[\\/]|$)/ },
+            ],
+          },
+        },
+      },
+    });
+  });
+
+  it("groups Tone.js into its own Rolldown vendor boundary", () => {
+    const groups = rolldownGroups(
+      defineGamePreset({ appName: "example-game", heavyDeps: { tone: true } }),
+    );
+    expect(groups.map(({ name }) => name)).toEqual(["tone-vendor"]);
+    expect(groups[0]?.test.test("/repo/node_modules/tone/build/esm/index.js")).toBe(true);
+    expect(groups[0]?.test.test("C:\\repo\\node_modules\\tone\\build\\esm\\index.js")).toBe(true);
+    expect(groups[0]?.test.test("/repo/node_modules/tone-extras/index.js")).toBe(false);
+  });
+
+  describe("chunks", () => {
+    const split = {
+      three: ["three"],
+      rapier: ["@react-three/rapier", "@dimforge/rapier3d-compat"],
+    };
+
+    it("emits one Rolldown group per chunk, in declaration order", () => {
+      const groups = rolldownGroups(defineGamePreset({ appName: "example-game", chunks: split }));
+      expect(groups.map(({ name }) => name)).toEqual(["three", "rapier"]);
+      expect(groups[1]?.test("/repo/node_modules/@react-three/rapier/dist/index.js")).toBe(true);
+      expect(groups[0]?.test("/repo/node_modules/@react-three/rapier/dist/index.js")).toBe(false);
+    });
+
+    it("emits no build config for empty chunks", () => {
+      expect(defineGamePreset({ appName: "example-game", chunks: {} }).build).toBeUndefined();
+    });
+
+    it("puts chunks ahead of heavyDeps groups", () => {
+      const groups = rolldownGroups(
+        defineGamePreset({
+          appName: "example-game",
+          heavyDeps: { phaser: true, tone: true },
+          chunks: split,
+        }),
+      );
+      expect(groups.map(({ name }) => name)).toEqual([
+        "three",
+        "rapier",
+        "phaser-vendor",
+        "tone-vendor",
+      ]);
+    });
+
+    it("keeps heavyDeps optimizeDeps wiring alongside chunks", () => {
+      const config = defineGamePreset({
+        appName: "example-game",
+        heavyDeps: { three: true, rapier: true },
+        chunks: split,
+      });
+      expect(config.optimizeDeps).toEqual({
+        include: ["three"],
+        exclude: ["@dimforge/rapier3d-compat"],
+      });
+    });
+
+    it("drops a heavyDeps group that a chunk of the same name redefines", () => {
+      const config = defineGamePreset({
+        appName: "example-game",
+        heavyDeps: { three: true, rapier: true, phaser: true },
+        chunks: { "three-vendor": ["three", "@react-three/fiber"] },
+      });
+      const groups = rolldownGroups(config);
+      expect(groups.map(({ name }) => name)).toEqual(["three-vendor", "phaser-vendor"]);
+      // The chunk's definition won, not the heavyDeps regular expression: it claims fiber, which
+      // the heavyDeps three-vendor group never did, and no longer claims Rapier.
+      expect(groups[0]?.test("/repo/node_modules/@react-three/fiber/dist/index.js")).toBe(true);
+      expect(groups[0]?.test("/repo/node_modules/@dimforge/rapier3d-compat/rapier.js")).toBe(false);
+    });
+
+    it("lets overrides replace a chunk by name without duplication", () => {
+      const callerGroup = { name: "three", test: /caller-three/ };
+      const groups = rolldownGroups(
+        defineGamePreset({
+          appName: "example-game",
+          chunks: split,
+          overrides: {
+            build: { rolldownOptions: { output: { codeSplitting: { groups: [callerGroup] } } } },
+          },
+        }),
+      );
+      expect(groups.map(({ name }) => name)).toEqual(["three", "rapier"]);
+      expect(groups[0]).toBe(callerGroup);
+    });
+
+    it("throws at config time for a chunk that cannot work", () => {
+      expect(() => defineGamePreset({ appName: "example-game", chunks: { a: [] } })).toThrow(
+        TypeError,
+      );
+      expect(() =>
+        defineGamePreset({ appName: "example-game", chunks: { a: ["x"], b: ["x"] } }),
+      ).toThrow(/claimed by both/);
+    });
   });
 
   it("omits optimizeDeps/build entirely when no heavyDeps are set", () => {
