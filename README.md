@@ -22,8 +22,10 @@ TypeScript and Biome base configs, so a dozen game repositories stop drifting ap
 ## Install
 
 ```sh
-pnpm add -D build-preset vite vitest @vitest/browser-playwright playwright
+pnpm add -D build-preset vite vitest @vitest/browser-playwright playwright game-harness
 ```
+
+`game-harness` provides the browser test config in the quick start below.
 
 `tsup` is an optional peer: install it only if you use `build-preset/tsup`.
 
