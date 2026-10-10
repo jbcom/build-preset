@@ -42,22 +42,17 @@ export default defineGamePreset({
 ```
 
 ```ts
-// vitest.browser.config.ts
-import { defineBrowserTest } from "build-preset/vitest";
+// vitest.browser.config.ts: browser tests come from game-harness, the owner of browser QA
+import { defineBrowserTestConfig } from "game-harness/vitest";
 import { defineConfig } from "vitest/config";
 
-const browserTest = defineBrowserTest({
+const browserTest = defineBrowserTestConfig({
   include: ["tests/browser/**/*.browser.test.ts"],
-  includeThree: false,
 });
 
 export default defineConfig({
-  optimizeDeps: browserTest.optimizeDeps,
-  test: {
-    include: browserTest.include,
-    fileParallelism: browserTest.fileParallelism,
-    browser: browserTest.browser,
-  },
+  optimizeDeps: { include: browserTest.__optimizeDepsInclude ?? [] },
+  test: browserTest,
 });
 ```
 

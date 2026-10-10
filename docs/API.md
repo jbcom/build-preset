@@ -78,7 +78,9 @@ from `@vitest/browser-playwright`. Passing a `headless` option, or a `--headless
 
 ### `defaultBrowserLaunchArgs(extra?)`
 
-**Deprecated** with `defineBrowserTest`. Removed in the next major.
+**Deprecated:** use game-harness's `createChromiumLaunchProfile` (`game-harness/chromium`), or its
+`gpuMode` and `gpuArgs` options on `defineBrowserTestConfig` (`game-harness/vitest`). Removed in the
+next major.
 
 ```ts
 function defaultBrowserLaunchArgs(extra?: string[]): string[];

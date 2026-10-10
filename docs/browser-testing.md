@@ -5,8 +5,10 @@ description: The headed, muted real-Chromium Vitest fragment and the unit-test f
 
 > **Deprecated.** Browser QA has one owner: use game-harness's `defineBrowserTestConfig`
 > (`game-harness/vitest`), which carries the renderer profiles, the mute, multi-instance viewports
-> and the browser server's address. `defineBrowserTest` and `defaultBrowserLaunchArgs` stay for
-> existing consumers and are removed in the next major. `defineUnitTest` stays here.
+> and the browser server's address; in place of `defaultBrowserLaunchArgs`, its
+> `createChromiumLaunchProfile` (`game-harness/chromium`). `defineBrowserTest` and
+> `defaultBrowserLaunchArgs` stay for existing consumers and are removed in the next major.
+> `defineUnitTest` stays here.
 
 ## `defineBrowserTest`
 

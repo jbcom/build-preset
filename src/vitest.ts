@@ -148,7 +148,7 @@ export function defineBrowserTest(options: DefineBrowserTestOptions = {}): {
 /**
  * GPU/ANGLE Chromium launch args that browser-game test configs converge on.
  *
- * @deprecated Use game-harness's `createChromiumLaunchProfile` through
+ * @deprecated Use game-harness's `createChromiumLaunchProfile` (`game-harness/chromium`) or
  * `defineBrowserTestConfig` (`game-harness/vitest`); removed in the next major.
  */
 export function defaultBrowserLaunchArgs(extra: string[] = []): string[] {
