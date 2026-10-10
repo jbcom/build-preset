@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/jbcom/build-preset/compare/v0.5.0...v0.6.0) (2026-10-10)
+
+
+### Features
+
+* **vitest:** deprecate defineBrowserTest for game-harness's defineBrowserTestConfig ([9735401](https://github.com/jbcom/build-preset/commit/97354016a796301af0b128cdd494d259f1e51e82))
+
 ## [0.5.0](https://github.com/jbcom/build-preset/compare/v0.4.1...v0.5.0) (2026-10-10)
 
 
