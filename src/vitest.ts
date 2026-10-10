@@ -102,6 +102,11 @@ function rejectHeadlessOptions(options: DefineBrowserTestOptions): void {
  * Real-browser (Chromium via Playwright) test config fragment — drives the
  * app through the DOM/store and asserts rendered output, not raw pixels.
  * Ships the GPU/ANGLE launch args and the dep-optimizer pre-bundle list.
+ *
+ * @deprecated Use game-harness's `defineBrowserTestConfig` (`game-harness/vitest`).
+ * Browser QA has one owner: game-harness carries the renderer profiles, the
+ * mute, multi-instance viewports and the browser server's address. This copy
+ * stays for existing consumers and is removed in the next major.
  */
 export function defineBrowserTest(options: DefineBrowserTestOptions = {}): {
   include: string[];
@@ -140,7 +145,12 @@ export function defineBrowserTest(options: DefineBrowserTestOptions = {}): {
   };
 }
 
-/** GPU/ANGLE Chromium launch args that browser-game test configs converge on. */
+/**
+ * GPU/ANGLE Chromium launch args that browser-game test configs converge on.
+ *
+ * @deprecated Use game-harness's `createChromiumLaunchProfile` through
+ * `defineBrowserTestConfig` (`game-harness/vitest`); removed in the next major.
+ */
 export function defaultBrowserLaunchArgs(extra: string[] = []): string[] {
   const hiddenHeadless = extra.find((argument) => /^--headless(?:=|$)/.test(argument));
   if (hiddenHeadless) {

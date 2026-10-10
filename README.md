@@ -89,6 +89,10 @@ for why the presets behave as they do.
 
 ## The browser test contract
 
+`defineBrowserTest` and `defaultBrowserLaunchArgs` are deprecated: browser QA has one owner, and it
+is game-harness (`defineBrowserTestConfig` from `game-harness/vitest`). They stay for existing
+consumers and are removed in the next major.
+
 `defineBrowserTest` is headed-only. It constructs the Vitest Playwright provider itself and puts
 `--mute-audio` in `provider.options.launchOptions.args`, so a silent run does not depend on a
 consumer remembering to copy a launch-argument array. It throws on a `headless` option and on any
