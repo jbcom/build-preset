@@ -9,7 +9,8 @@ its Vitest unit and real-browser test fragments, a Capacitor config, a tsup libr
 TypeScript and Biome base configs, so a dozen game repositories stop drifting apart.
 
 - **Vite 8** game config with env-switched `base`, Rolldown code-splitting groups for
-  heavy vendors (three.js, Rapier, Phaser), HMR watch-ignore, and an optional `@` alias.
+  heavy vendors (three.js, Rapier, Phaser, Tone.js) or your own vendor chunks, HMR
+  watch-ignore, and an optional `@` alias.
 - **Vitest 4 or 5** fragments: a jsdom or Node unit config and a **headed, muted** real-Chromium
   browser config that builds the Playwright provider itself.
 - **Capacitor** config with a documented merge, so overriding `server.hostname` keeps
@@ -70,12 +71,35 @@ export default defineConfig({
 { "extends": ["build-preset/biome.base.json"] }
 ```
 
+## Vendor chunks by when they load
+
+`heavyDeps` toggles fixed groups. A game that splits vendor code by when it loads names its own
+chunks. In declaration order, the first chunk matching a module takes it; `chunks` outrank
+`heavyDeps`:
+
+```ts
+defineGamePreset({
+  appName: "example-game",
+  chunks: {
+    three: ["three"], // the title preloads these three...
+    r3f: ["@react-three/fiber"],
+    drei: ["@react-three/drei"],
+    rapier: ["@react-three/rapier", "@dimforge/rapier3d-compat"], // ...the room loads these
+    post: ["@react-three/postprocessing", "postprocessing", "n8ao"],
+    tone: ["tone"],
+  },
+});
+```
+
+A string is an npm package name; a `RegExp` is tested against the module id. See
+[the Vite page](docs/vite.md#vendor-chunks-by-when-they-load) for the precedence rules.
+
 ## API overview
 
 | Import | Exports |
 | --- | --- |
 | `build-preset` | Everything below except `/tsup` (a thin barrel; prefer the subpaths) |
-| `build-preset/vite` | `defineGamePreset`, `HeavyDepsOptions` |
+| `build-preset/vite` | `defineGamePreset`, `HeavyDepsOptions`, `VendorChunks`, `ChunkPattern` |
 | `build-preset/vitest` | `defineUnitTest`, `defineBrowserTest`, `defaultBrowserLaunchArgs` |
 | `build-preset/capacitor` | `defineCapacitorPreset`, `mergeCapacitorConfig`, `androidVersionGradleSnippet` |
 | `build-preset/tsup` | `libraryBuild` |
