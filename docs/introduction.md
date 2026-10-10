@@ -16,7 +16,7 @@ config object and accepts an `overrides` escape hatch that merges last.
 
 | Problem | build-preset convention |
 | --- | --- |
-| Heavy vendors (three.js, Rapier, Phaser) split into racing chunks | Rolldown `codeSplitting.groups` and `optimizeDeps` per `heavyDeps` toggle |
+| Heavy vendors (three.js, Rapier, Phaser, Tone.js) split into racing chunks | Rolldown `codeSplitting.groups` and `optimizeDeps` per `heavyDeps` toggle, or your own split by load time with `chunks` |
 | A browser test run is loud, or runs headless and hides GPU bugs | Headed-only Chromium with `--mute-audio` built into the provider |
 | A mid-run dependency re-bundle produces a second React instance | The dep-optimizer pre-bundle list is part of the browser fragment |
 | Overriding one Capacitor key discards the preset's sibling keys | `server`, `android`, `ios` and `plugins` merge one level deep |

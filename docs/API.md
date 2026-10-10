@@ -16,7 +16,8 @@ function defineGamePreset(options: DefineGamePresetOptions): UserConfig;
 | `appName` | `string` (required) | Drives the default GitHub Pages base `/<appName>/` |
 | `base` | `string` | Explicit base. Otherwise `VITE_BASE`, then `CAPACITOR=true` (`/`), then `GITHUB_PAGES=true`, then `/` |
 | `plugins` | `PluginOption[]` | Framework plugins the caller supplies |
-| `heavyDeps` | `HeavyDepsOptions` | `{ three?, rapier?, phaser? }`, see below |
+| `heavyDeps` | `HeavyDepsOptions` | `{ three?, rapier?, phaser?, tone? }`, see below |
+| `chunks` | `VendorChunks` | `Record<chunkName, (string \| RegExp)[]>`: vendor chunks by when they load, see below |
 | `watchIgnore` | `string[]` | Appended to the preset's dev-server watch-ignore globs |
 | `dedupe` | `string[]` | Extra ids to dedupe beyond `react` and `react-dom` |
 | `srcDir` | `string` | Absolute path for the optional `@` alias. A relative path throws `TypeError` |
@@ -24,8 +25,16 @@ function defineGamePreset(options: DefineGamePresetOptions): UserConfig;
 
 `heavyDeps.three` adds `optimizeDeps.include: ["three"]` and a `three-vendor` group.
 `heavyDeps.rapier` excludes `@dimforge/rapier3d-compat` from optimization and co-chunks it with
-three. `heavyDeps.phaser` adds a `phaser-vendor` group. Groups use Rolldown
-`build.rolldownOptions.output.codeSplitting.groups`.
+three. `heavyDeps.phaser` adds a `phaser-vendor` group and `heavyDeps.tone` a `tone-vendor` group.
+Groups use Rolldown `build.rolldownOptions.output.codeSplitting.groups`.
+
+`chunks` emits one group per key, ahead of the `heavyDeps` groups. A string is an npm package name
+(it claims `node_modules/<name>/` and nothing else); a `RegExp` is tested against the module id and
+must not carry the `g` or `y` flag. A module several chunks match goes to the first one declared. A
+`heavyDeps` group named like a chunk is dropped; a package named in two chunks, an empty chunk and
+a purely numeric chunk name throw `TypeError`. `chunks` never changes `optimizeDeps`. The types
+`VendorChunks` and `ChunkPattern` are exported. The full precedence rules, with a load-time
+split as the example, are in [Vite](vite.md#vendor-chunks-by-when-they-load).
 
 ## `build-preset/vitest`
 
