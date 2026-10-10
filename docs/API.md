@@ -33,7 +33,7 @@ Groups use Rolldown `build.rolldownOptions.output.codeSplitting.groups`.
 must not carry the `g` or `y` flag. A module several chunks match goes to the first one declared. A
 `heavyDeps` group named like a chunk is dropped; a package named in two chunks, an empty chunk and
 a purely numeric chunk name throw `TypeError`. `chunks` never changes `optimizeDeps`. The types
-`VendorChunks` and `ChunkPattern` are exported. The full precedence rules, with the Will It Blow?
+`VendorChunks` and `ChunkPattern` are exported. The full precedence rules, with a load-time
 split as the example, are in [Vite](vite.md#vendor-chunks-by-when-they-load).
 
 ## `build-preset/vitest`

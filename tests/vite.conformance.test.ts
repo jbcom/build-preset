@@ -249,7 +249,7 @@ describe("Vite conformance", () => {
       return { chunks, cleanup: () => rm(root, { recursive: true, force: true }) };
     }
 
-    // Will It Blow?'s split: what loads with the title is separate from what loads with the room.
+    // A load-time split: what loads with the title is separate from what loads with the level.
     const WHEN_IT_LOADS = {
       three: ["three"],
       rapier: ["@react-three/rapier", "@dimforge/rapier3d-compat"],
