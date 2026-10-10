@@ -352,6 +352,10 @@ export default defineConfig({
     throw new Error("installed tarball did not produce the expected Vite bundle");
   }
   if (runBrowser) {
+    // The consumer's Playwright is whatever the registry serves for its range, which can be newer
+    // than this repository's: like a real consumer, it installs its own Chromium build (into the
+    // shared cache, so a matching build already there is reused).
+    pnpm(["exec", "playwright", "install", "--no-shell", "chromium"], scratch, environment);
     execFileSync(
       process.execPath,
       [path.join(packageRoot, "scripts/verify-build-preset-browser.mjs")],
