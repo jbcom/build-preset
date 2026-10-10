@@ -1,6 +1,6 @@
 {
   "name": "build-preset",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Shared build conventions for browser games: Vite 8 and Vitest configs with headed, muted browser testing, a Capacitor config, a tsup library build, and TypeScript and Biome base configs.",
   "type": "module",
   "license": "MIT",

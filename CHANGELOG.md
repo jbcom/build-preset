@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/jbcom/build-preset/compare/v0.4.1...v0.5.0) (2026-10-10)
+
+
+### Features
+
+* **vite:** name vendor chunks by when they load with `chunks` ([80fc6be](https://github.com/jbcom/build-preset/commit/80fc6be3bba61d92b63128edf575edad1ff75008))
+* **vite:** name vendor chunks by when they load with chunks ([f682d4c](https://github.com/jbcom/build-preset/commit/f682d4c4db66ccf3245a8da15dade31285d02fa2))
+
 ## [0.4.1](https://github.com/jbcom/build-preset/compare/v0.4.0...v0.4.1) (2026-10-07)
 
 
