@@ -51,6 +51,9 @@ function defineUnitTest(options?: DefineUnitTestOptions): UnitTestFragment;
 
 ### `defineBrowserTest(options?)`
 
+**Deprecated:** use game-harness's `defineBrowserTestConfig` (`game-harness/vitest`). Removed in the
+next major.
+
 ```ts
 function defineBrowserTest(options?: DefineBrowserTestOptions): {
   include: string[];
@@ -74,6 +77,10 @@ from `@vitest/browser-playwright`. Passing a `headless` option, or a `--headless
 `extraLaunchArgs`, throws `TypeError`.
 
 ### `defaultBrowserLaunchArgs(extra?)`
+
+**Deprecated:** use game-harness's `createChromiumLaunchProfile` (`game-harness/chromium`), or its
+`gpuMode` and `gpuArgs` options on `defineBrowserTestConfig` (`game-harness/vitest`). Removed in the
+next major.
 
 ```ts
 function defaultBrowserLaunchArgs(extra?: string[]): string[];

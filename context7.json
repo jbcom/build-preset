@@ -7,6 +7,7 @@
   "excludeFolders": ["node_modules", "dist", "coverage", "docs/dist", "docs/node_modules"],
   "excludeFiles": ["CHANGELOG.md"],
   "rules": [
+    "defineBrowserTest is deprecated: use game-harness's defineBrowserTestConfig (game-harness/vitest) for browser tests.",
     "defineBrowserTest is headed-only and always passes --mute-audio; never add a headless option.",
     "Every factory accepts an overrides option that is merged last.",
     "srcDir must be an absolute path; a relative path throws.",

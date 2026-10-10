@@ -22,8 +22,10 @@ TypeScript and Biome base configs, so a dozen game repositories stop drifting ap
 ## Install
 
 ```sh
-pnpm add -D build-preset vite vitest @vitest/browser-playwright playwright
+pnpm add -D build-preset vite vitest @vitest/browser-playwright playwright game-harness
 ```
+
+`game-harness` provides the browser test config in the quick start below.
 
 `tsup` is an optional peer: install it only if you use `build-preset/tsup`.
 
@@ -42,22 +44,17 @@ export default defineGamePreset({
 ```
 
 ```ts
-// vitest.browser.config.ts
-import { defineBrowserTest } from "build-preset/vitest";
+// vitest.browser.config.ts: browser tests come from game-harness, the owner of browser QA
+import { defineBrowserTestConfig } from "game-harness/vitest";
 import { defineConfig } from "vitest/config";
 
-const browserTest = defineBrowserTest({
+const browserTest = defineBrowserTestConfig({
   include: ["tests/browser/**/*.browser.test.ts"],
-  includeThree: false,
 });
 
 export default defineConfig({
-  optimizeDeps: browserTest.optimizeDeps,
-  test: {
-    include: browserTest.include,
-    fileParallelism: browserTest.fileParallelism,
-    browser: browserTest.browser,
-  },
+  optimizeDeps: { include: browserTest.__optimizeDepsInclude ?? [] },
+  test: browserTest,
 });
 ```
 
@@ -112,6 +109,10 @@ See the [API reference](docs/API.md) for every option and the [architecture note
 for why the presets behave as they do.
 
 ## The browser test contract
+
+`defineBrowserTest` and `defaultBrowserLaunchArgs` are deprecated: browser QA has one owner, and it
+is game-harness (`defineBrowserTestConfig` from `game-harness/vitest`). They stay for existing
+consumers and are removed in the next major.
 
 `defineBrowserTest` is headed-only. It constructs the Vitest Playwright provider itself and puts
 `--mute-audio` in `provider.options.launchOptions.args`, so a silent run does not depend on a

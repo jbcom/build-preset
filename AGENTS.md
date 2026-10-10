@@ -23,7 +23,8 @@ from reading the code alone.
 ## Core invariants: do not violate these when editing `src/`
 
 1. `defineBrowserTest` is headed-only and always carries `--mute-audio`. Never add a `headless`
-   option, and never accept a hidden `--headless` argument.
+   option, and never accept a hidden `--headless` argument. It is deprecated: browser QA belongs to
+   game-harness (`defineBrowserTestConfig`). Do not extend it; new browser options go there.
 2. Every factory takes `overrides` and applies it last.
 3. A relative `srcDir` throws; never resolve it silently.
 4. Heavy-vendor chunking uses Rolldown `codeSplitting.groups`, never `manualChunks`.
