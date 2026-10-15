@@ -3,6 +3,17 @@ title: Decisions
 description: Why the package is shaped the way it is, with the reasoning behind each choice.
 ---
 
+## 2026-10-15: explicit static route output
+
+**Decision.** Offer `staticRouteExport` as an opt-in Vite plugin through the existing `plugins`
+extension point. Copy only the transformed built index into validated, declared route directories;
+read the final output directory and require a nesting-safe asset base. Refuse conflicting documents
+and linked route paths. Native and non-HTML builds do not export aliases.
+
+**Why.** Static hosts need real route documents when they do not supply an SPA fallback. Copying
+source HTML would retain uncompiled entry references. Directory-index files alone cannot control
+a host's clean-URL behavior, so server routing remains a separate deployment contract.
+
 ## 2026-10-07: open source, unscoped on npm, single package at the root
 
 **Decision.** The package publishes to npmjs as `build-preset` from `github.com/jbcom/build-preset`,

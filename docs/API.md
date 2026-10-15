@@ -5,6 +5,48 @@ Everything is exported from `build-preset`, except `libraryBuild`, which lives o
 
 ## `build-preset/vite`
 
+### `staticRouteExport(options?)`
+
+An opt-in Vite plugin that copies the final built `index.html` into declared route directories.
+It reads the resolved `root` and `build.outDir`, including caller overrides, in a post-order,
+sequential `closeBundle` hook. Use it through the preset's existing `plugins` option:
+
+```ts
+import { defineGamePreset, staticRouteExport } from "build-preset/vite";
+
+export default defineGamePreset({
+  appName: "example-game",
+  plugins: [staticRouteExport({ routes: ["/play", "guide/topic"] })],
+});
+```
+
+| Option | Type | Meaning |
+| --- | --- | --- |
+| `routes` | `readonly string[]` | Directory routes; omitted means no exports. Optional leading/trailing slash is accepted; `/` already exists. |
+| `enabled` | `boolean` | Defaults to `true`; `false` disables output. |
+| `native` | `boolean` | Defaults to `process.env.CAPACITOR === "true"`; native output is skipped. |
+
+Routes use slash-separated ASCII letters, digits, underscores and hyphens. Traversal, empty
+segments, URL parameters, encodings, file extensions, Windows device names and case collisions
+are rejected. Exact duplicates are deduplicated. Existing route directories must be ordinary
+directories, never symbolic links. An existing destination index is retained only if its bytes
+equal the current built index; a different document is never overwritten. A repeated normal build
+refreshes aliases after Vite empties its output; with `emptyOutDir: false`, remove changed old
+aliases before rebuilding.
+
+The plugin runs only for written HTML web builds, skipping serve, native, SSR, library and
+`build.write: false` modes. A failed build that never writes its bundle cannot export a stale
+retained index. An active export requires the built root index to exist. `base` must
+be root-relative (`/` or `/example/`) or an absolute HTTP(S) URL; a relative base such as `./`
+would make copied asset URLs resolve beneath each route and is rejected. The built HTML is copied
+byte for byte, so custom relative URLs in that document remain the caller's responsibility.
+
+This exports files such as `guide/topic/index.html`; it does not install redirects or server
+fallbacks. A server may still return 404 for `/guide/topic` even when that file exists. Verify
+the deployed clean URL, its trailing-slash form, its explicit `index.html`, and referenced assets
+on the actual host; configure directory indexes or rewrites there as needed. File-export tests
+do not establish a particular server's routing behavior.
+
 ### `defineGamePreset(options)`
 
 ```ts

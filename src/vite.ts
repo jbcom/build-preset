@@ -1,5 +1,6 @@
+import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { mergeConfig, type PluginOption, type UserConfig } from "vite";
+import { mergeConfig, type Plugin, type PluginOption, type UserConfig } from "vite";
 
 /**
  * One pattern that claims modules for a vendor chunk.
@@ -351,4 +352,110 @@ export function defineGamePreset(options: DefineGamePresetOptions): UserConfig {
   };
 
   return reconcileNamedCodeSplittingGroups(mergeConfig(preset, overrides));
+}
+
+/** Explicit web-only aliases for one built SPA document; this does not configure a server's URL routing. */
+export interface StaticRouteExportOptions {
+  /** Directory routes such as `/play` or `guide/topic/`; `/` already has the root index. */
+  routes?: readonly string[];
+  /** Disable emission without removing the plugin from the caller's configuration. Defaults to true. */
+  enabled?: boolean;
+  /** Skip native builds. Defaults to whether CAPACITOR is exactly `true`. */
+  native?: boolean;
+}
+
+function declaredRoutes(routes: readonly string[]): string[] {
+  const unique = new Map<string, string>();
+  for (const route of routes) {
+    if (route === "/") continue;
+    const clean = route.replace(/^\//, "").replace(/\/$/, "");
+    if (
+      !clean
+        .split("/")
+        .every(
+          (part) =>
+            /^[a-z0-9_-]+$/i.test(part) && !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(part),
+        )
+    )
+      throw new TypeError(
+        `staticRouteExport has an unsafe or nonportable route: ${JSON.stringify(route)}`,
+      );
+    const key = clean.toLowerCase();
+    if (unique.has(key) && unique.get(key) !== clean)
+      throw new TypeError(
+        `staticRouteExport routes collide on case-insensitive filesystems: ${JSON.stringify(route)}`,
+      );
+    unique.set(key, clean);
+  }
+  return [...unique.values()];
+}
+
+function routeDirectory(output: string, route: string): string {
+  let directory = output;
+  for (const segment of route.split("/")) {
+    directory = path.join(directory, segment);
+    if (existsSync(directory)) {
+      const stat = lstatSync(directory);
+      if (stat.isSymbolicLink() || !stat.isDirectory())
+        throw new Error(`staticRouteExport route directory is not a plain directory: ${directory}`);
+    } else mkdirSync(directory);
+  }
+  return directory;
+}
+
+function copyRouteIndex(output: string, route: string, html: Buffer): void {
+  const target = path.join(routeDirectory(output, route), "index.html");
+  if (existsSync(target)) {
+    const stat = lstatSync(target);
+    if (stat.isSymbolicLink() || !stat.isFile() || !readFileSync(target).equals(html))
+      throw new Error(`staticRouteExport refuses to overwrite an existing route index: ${target}`);
+    return;
+  }
+  writeFileSync(target, html, { flag: "wx" });
+}
+
+/**
+ * Copy the final built index to declared route directories after bundle output has closed.
+ * Requires a root-relative or absolute HTTP(S) base so compiled asset URLs survive nesting.
+ */
+export function staticRouteExport(options: StaticRouteExportOptions = {}): Plugin {
+  const routes = declaredRoutes(options.routes ?? []);
+  const enabled = options.enabled ?? true;
+  const native = options.native ?? process.env.CAPACITOR === "true";
+  let output: string | undefined;
+  let written = false;
+  return {
+    name: "build-preset:static-route-export",
+    apply: "build",
+    buildStart() {
+      written = false;
+    },
+    writeBundle() {
+      written = true;
+    },
+    configResolved(config) {
+      output = undefined;
+      if (
+        !enabled ||
+        native ||
+        routes.length === 0 ||
+        !config.build.write ||
+        config.build.ssr ||
+        config.build.lib
+      )
+        return;
+      if (!config.base.startsWith("/") && !/^https?:\/\//.test(config.base))
+        throw new TypeError("staticRouteExport requires a root-relative or absolute HTTP(S) base");
+      output = path.resolve(config.root, config.build.outDir);
+    },
+    closeBundle: {
+      order: "post",
+      sequential: true,
+      handler() {
+        if (!written || output === undefined) return;
+        const html = readFileSync(path.join(output, "index.html"));
+        for (const route of routes) copyRouteIndex(output, route, html);
+      },
+    },
+  };
 }

@@ -204,10 +204,10 @@ const esm = {
   vitest: vitestPreset,
 };
 const expected = {
-  root: ["defineGamePreset", "defineBrowserTest", "defineUnitTest", "defineCapacitorPreset"],
+  root: ["defineGamePreset", "staticRouteExport", "defineBrowserTest", "defineUnitTest", "defineCapacitorPreset"],
   capacitor: ["defineCapacitorPreset", "mergeCapacitorConfig", "androidVersionGradleSnippet"],
   tsup: ["libraryBuild"],
-  vite: ["defineGamePreset"],
+  vite: ["defineGamePreset", "staticRouteExport"],
   vitest: ["defineUnitTest", "defineBrowserTest", "defaultBrowserLaunchArgs"],
 };
 for (const [entry, names] of Object.entries(expected)) {
@@ -252,9 +252,14 @@ await build(
   esm.vite.defineGamePreset({
     appName: "fixture",
     srcDir: path.resolve("src"),
+    plugins: [esm.vite.staticRouteExport({ routes: ["guide/topic"] })],
     overrides: { root: process.cwd(), logLevel: "silent" },
   }),
 );
+const rootIndex = await readFile("dist/index.html", "utf8");
+if (await readFile("dist/guide/topic/index.html", "utf8") !== rootIndex) {
+  throw new Error("packed static route export did not copy the transformed index");
+}
 `,
   );
   await writeFile(
