@@ -96,7 +96,7 @@ A string is an npm package name; a `RegExp` is tested against the module id. See
 | Import | Exports |
 | --- | --- |
 | `build-preset` | Everything below except `/tsup` (a thin barrel; prefer the subpaths) |
-| `build-preset/vite` | `defineGamePreset`, `HeavyDepsOptions`, `VendorChunks`, `ChunkPattern` |
+| `build-preset/vite` | `defineGamePreset`, `staticRouteExport`, `StaticRouteExportOptions`, `HeavyDepsOptions`, `VendorChunks`, `ChunkPattern` |
 | `build-preset/vitest` | `defineUnitTest`, `defineBrowserTest`, `defaultBrowserLaunchArgs` |
 | `build-preset/capacitor` | `defineCapacitorPreset`, `mergeCapacitorConfig`, `androidVersionGradleSnippet` |
 | `build-preset/tsup` | `libraryBuild` |

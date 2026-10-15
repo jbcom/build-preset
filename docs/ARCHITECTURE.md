@@ -1,12 +1,14 @@
 # Architecture
 
-build-preset is configuration, not tooling. Each module is a pure function from options to a plain
-config object, so it is cheap to test and easy to override.
+The preset factories are pure functions from options to plain config objects, so they are cheap
+to test and easy to override. The opt-in `staticRouteExport` Vite plugin performs bounded file
+output only after a written HTML web build has closed; importing or creating it writes nothing.
 
 ## Module boundaries
 
 ```text
 vite ───────────> vite (mergeConfig, normalizePath)
+               > node:fs, node:path (opt-in static route output)
 vitest ─────────> @vitest/browser-playwright
 capacitor ──────> (leaf: no imports)
 tsup ───────────> tsup (types only)
@@ -19,6 +21,12 @@ consumer nothing at runtime, and the barrel leaves it out so that a project that
 library never needs its types either.
 
 ## Contracts
+
+Static route export uses the final resolved output directory and transformed index, validates
+portable declared directory paths, refuses linked directories and conflicting documents, and
+requires an asset base that survives nesting. The plugin does not configure a deployment server.
+Its integration tests execute Vite builds and verify output bytes and asset references separately
+from HTTP routing acceptance.
 
 1. **Overrides merge last.** Every factory takes an `overrides` option applied after all derived
    fields, so no project is boxed in by a preset default.
