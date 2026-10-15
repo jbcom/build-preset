@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.0](https://github.com/jbcom/build-preset/compare/v0.6.0...v0.7.0) (2026-10-15)
+
+
+### Features
+
+* **vite:** export declared static route indexes ([f050ef3](https://github.com/jbcom/build-preset/commit/f050ef3bead695d22f1960799f1cd4a8edff9bef))
+* **vite:** export declared static route indexes ([ddd980e](https://github.com/jbcom/build-preset/commit/ddd980e3afc7e306dadf9f2addacef699e83e5e9))
+
+
+### Bug Fixes
+
+* **vite:** harden static route export lifecycle and file handling ([48e4a5f](https://github.com/jbcom/build-preset/commit/48e4a5f6ddd0330a755840cd8fa89c48ff61bb44))
+* **vite:** isolate static route export to client output ([bb5f19f](https://github.com/jbcom/build-preset/commit/bb5f19fb290ce0c35254fe831360951fb6f031e8))
+
 ## [0.6.0](https://github.com/jbcom/build-preset/compare/v0.5.0...v0.6.0) (2026-10-10)
 
 
