@@ -24,7 +24,7 @@ export default defineGamePreset({
 | --- | --- | --- |
 | `routes` | `readonly string[]` | Directory routes; omitted means no exports. Optional leading/trailing slash is accepted; `/` already exists. |
 | `enabled` | `boolean` | Defaults to `true`; `false` disables output. |
-| `native` | `boolean` | Defaults to `process.env.CAPACITOR === "true"` at each build's config resolution; native output is skipped. |
+| `native` | `boolean` | Defaults to `process.env.CAPACITOR === "true"` at each build's environment selection; native output is skipped. |
 
 Routes use slash-separated ASCII letters, digits, underscores and hyphens. Traversal, empty
 segments, URL parameters, encodings, file extensions, Windows device names and case collisions
@@ -36,7 +36,8 @@ entry. A repeated normal build
 refreshes aliases after Vite empties its output; with `emptyOutDir: false`, remove changed old
 aliases before rebuilding.
 
-The plugin runs only for written HTML web builds, skipping serve, native, SSR, library and
+The plugin runs only for written HTML web builds in Vite's `client` environment, using that
+environment's output directory and skipping serve, native, SSR, library and
 `build.write: false` modes. A failed build that never writes its bundle cannot export a stale
 retained index. An active export requires the built root index to exist; read failures identify
 that built index and retain the original error as their cause. `base` must

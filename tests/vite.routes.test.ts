@@ -1,7 +1,14 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { build, type InlineConfig, type Plugin, resolveConfig, type UserConfig } from "vite";
+import {
+  build,
+  createBuilder,
+  type InlineConfig,
+  type Plugin,
+  resolveConfig,
+  type UserConfig,
+} from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staticRouteExport as routes } from "../src/vite.js";
 
@@ -169,6 +176,29 @@ describe("static route export", () => {
       );
       expect(await readdir(path.join(root, "web-output"))).not.toContain("play");
     }
+  });
+
+  it("exports only the client environment using its own output in a shared multi-environment build", async () => {
+    const root = await fixture();
+    await mkdir(path.join(root, "web-output"));
+    await writeFile(path.join(root, "web-output/index.html"), "unrelated retained output");
+    const builder = await createBuilder(
+      config(root, [routes({ routes: ["play"] })], {
+        builder: { sharedPlugins: true },
+        environments: {
+          client: { build: { outDir: "client-output" } },
+          ssr: { build: { outDir: "server-output", ssr: path.join(root, "main.js") } },
+        },
+      }),
+    );
+    await builder.build(builder.environments.ssr);
+    expect(await readdir(path.join(root, "web-output"))).toEqual(["index.html"]);
+    expect(await readdir(path.join(root, "server-output"))).not.toContain("play");
+    await builder.build(builder.environments.client);
+    expect(await readFile(path.join(root, "client-output/play/index.html"), "utf8")).toBe(
+      await readFile(path.join(root, "client-output/index.html"), "utf8"),
+    );
+    expect(await readdir(path.join(root, "web-output"))).toEqual(["index.html"]);
   });
 
   it("requires an index document for an active HTML export", async () => {

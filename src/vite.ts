@@ -467,7 +467,6 @@ function builtIndex(output: string): Buffer {
 export function staticRouteExport(options: StaticRouteExportOptions = {}): Plugin {
   const routes = declaredRoutes(options.routes ?? []);
   const enabled = options.enabled ?? true;
-  let output: string | undefined;
   let written = false;
   return {
     name: "build-preset:static-route-export",
@@ -478,10 +477,11 @@ export function staticRouteExport(options: StaticRouteExportOptions = {}): Plugi
     writeBundle() {
       written = true;
     },
-    configResolved(config) {
-      output = undefined;
+    applyToEnvironment(environment) {
+      const config = environment.config;
       const native = options.native ?? process.env.CAPACITOR === "true";
       if (
+        environment.name !== "client" ||
         !enabled ||
         native ||
         routes.length === 0 ||
@@ -489,16 +489,18 @@ export function staticRouteExport(options: StaticRouteExportOptions = {}): Plugi
         config.build.ssr ||
         config.build.lib
       )
-        return;
+        return false;
       if (!config.base.startsWith("/") && !/^https?:\/\//.test(config.base))
         throw new TypeError("staticRouteExport requires a root-relative or absolute HTTP(S) base");
-      output = path.resolve(config.root, config.build.outDir);
+      return true;
     },
     closeBundle: {
       order: "post",
       sequential: true,
       handler() {
-        if (!written || output === undefined) return;
+        if (!written) return;
+        const config = this.environment.config;
+        const output = path.resolve(config.root, config.build.outDir);
         const html = builtIndex(output);
         for (const route of routes) copyRouteIndex(output, route, html);
       },
