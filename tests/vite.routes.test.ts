@@ -7,6 +7,8 @@ import { staticRouteExport as routes } from "../src/vite.js";
 
 const roots: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
+  vi.doUnmock("node:fs");
   vi.unstubAllEnvs();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
@@ -97,6 +99,18 @@ describe("static route export", () => {
     await expect(readdir(path.join(root, "web-output"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("re-evaluates the default native flag for each build using the same plugin", async () => {
+    const root = await fixture();
+    const plugin = routes({ routes: ["play"] });
+    vi.stubEnv("CAPACITOR", "false");
+    await build(config(root, [plugin]));
+    vi.stubEnv("CAPACITOR", "true");
+    await build(config(root, [plugin]));
+    expect(await readdir(path.join(root, "web-output"))).not.toContain("play");
+    await build(config(root, [routes({ routes: ["play"], native: false })]));
+    expect(await readdir(path.join(root, "web-output"))).toContain("play");
+  });
+
   it.each([
     "",
     "../outside",
@@ -165,7 +179,7 @@ describe("static route export", () => {
           build: { outDir: "web-output", rolldownOptions: { input: path.join(root, "main.js") } },
         }),
       ),
-    ).rejects.toThrow(/index.html/);
+    ).rejects.toThrow(/staticRouteExport.*index.html/);
   });
 
   it("does not export a stale root index when the current build fails before writing", async () => {
@@ -237,4 +251,86 @@ describe("static route export", () => {
       "separate document",
     );
   });
+
+  it("reads existing identical aliases through an open descriptor rather than re-opening a checked pathname", async () => {
+    const root = await fixture();
+    const options = config(root, [routes({ routes: ["play"] })], {
+      build: { outDir: "web-output", emptyOutDir: false },
+    });
+    await build(options);
+    const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+    const read = vi.fn(actual.readFileSync);
+    vi.resetModules();
+    vi.doMock("node:fs", () => ({ ...actual, readFileSync: read }));
+    const fresh = await import("../src/vite.js");
+    await build(
+      config(root, [fresh.staticRouteExport({ routes: ["play"] })], {
+        build: { outDir: "web-output", emptyOutDir: false },
+      }),
+    );
+    const pathReads = read.mock.calls.filter(
+      ([file]) => typeof file === "string" && file.endsWith(path.join("play", "index.html")),
+    ).length;
+    expect(read.mock.calls.length).toBeGreaterThan(0);
+    expect(pathReads).toBe(0);
+  });
+
+  it.each(["create denied", "read denied", "changed identity", "write failed"] as const)(
+    "preserves filesystem errors and closes opened descriptors: %s",
+    async (failure) => {
+      const root = await fixture();
+      await build(config(root, [routes({ routes: ["play"] })]));
+      if (failure === "write failed") await rm(path.join(root, "web-output/play/index.html"));
+      const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+      const closed = vi.fn(actual.closeSync);
+      const opened: number[] = [];
+      const denied = Object.assign(new Error("denied by filesystem"), { code: "EACCES" });
+      vi.resetModules();
+      vi.doMock("node:fs", () => ({
+        ...actual,
+        closeSync: closed,
+        openSync: (...args: Parameters<typeof actual.openSync>) => {
+          if (String(args[0]).endsWith(path.join("play", "index.html"))) {
+            if (
+              (failure === "create denied" && args[1] === "wx") ||
+              (failure === "read denied" && args[1] === "r")
+            )
+              throw denied;
+            const descriptor = actual.openSync(...args);
+            opened.push(descriptor);
+            return descriptor;
+          }
+          return actual.openSync(...args);
+        },
+        lstatSync: (...args: Parameters<typeof actual.lstatSync>) => {
+          const stat = actual.lstatSync(...args);
+          if (
+            failure === "changed identity" &&
+            String(args[0]).endsWith(path.join("play", "index.html"))
+          )
+            return { ...stat, ino: -1 };
+          return stat;
+        },
+        writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
+          if (failure === "write failed" && typeof args[0] === "number") throw denied;
+          return actual.writeFileSync(...args);
+        },
+      }));
+      const fresh = await import("../src/vite.js");
+      await expect(
+        build(
+          config(root, [fresh.staticRouteExport({ routes: ["play"] })], {
+            build: { outDir: "web-output", emptyOutDir: false },
+          }),
+        ),
+      ).rejects.toThrow(
+        failure === "create denied" || failure === "write failed"
+          ? /denied by filesystem/
+          : /refuses to overwrite/,
+      );
+      expect(closed.mock.calls.map(([descriptor]) => descriptor)).toEqual(opened);
+      if (failure === "changed identity" || failure === "write failed")
+        expect(opened).toHaveLength(1);
+    },
+  );
 });

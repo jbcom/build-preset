@@ -24,19 +24,22 @@ export default defineGamePreset({
 | --- | --- | --- |
 | `routes` | `readonly string[]` | Directory routes; omitted means no exports. Optional leading/trailing slash is accepted; `/` already exists. |
 | `enabled` | `boolean` | Defaults to `true`; `false` disables output. |
-| `native` | `boolean` | Defaults to `process.env.CAPACITOR === "true"`; native output is skipped. |
+| `native` | `boolean` | Defaults to `process.env.CAPACITOR === "true"` at each build's config resolution; native output is skipped. |
 
 Routes use slash-separated ASCII letters, digits, underscores and hyphens. Traversal, empty
 segments, URL parameters, encodings, file extensions, Windows device names and case collisions
 are rejected. Exact duplicates are deduplicated. Existing route directories must be ordinary
 directories, never symbolic links. An existing destination index is retained only if its bytes
-equal the current built index; a different document is never overwritten. A repeated normal build
+equal the current built index; a different document is never overwritten. New indexes are created
+exclusively; existing indexes are read through a descriptor checked against the current directory
+entry. A repeated normal build
 refreshes aliases after Vite empties its output; with `emptyOutDir: false`, remove changed old
 aliases before rebuilding.
 
 The plugin runs only for written HTML web builds, skipping serve, native, SSR, library and
 `build.write: false` modes. A failed build that never writes its bundle cannot export a stale
-retained index. An active export requires the built root index to exist. `base` must
+retained index. An active export requires the built root index to exist; read failures identify
+that built index and retain the original error as their cause. `base` must
 be root-relative (`/` or `/example/`) or an absolute HTTP(S) URL; a relative base such as `./`
 would make copied asset URLs resolve beneath each route and is rejected. The built HTML is copied
 byte for byte, so custom relative URLs in that document remain the caller's responsibility.

@@ -1,4 +1,13 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { mergeConfig, type Plugin, type PluginOption, type UserConfig } from "vite";
 
@@ -403,15 +412,52 @@ function routeDirectory(output: string, route: string): string {
   return directory;
 }
 
+function validateExistingIndex(target: string, html: Buffer): void {
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(target, "r");
+    const opened = fstatSync(descriptor);
+    const entry = lstatSync(target);
+    if (
+      entry.isSymbolicLink() ||
+      !opened.isFile() ||
+      `${opened.dev}:${opened.ino}` !== `${entry.dev}:${entry.ino}` ||
+      !readFileSync(descriptor).equals(html)
+    )
+      throw new Error("Route index differs or changed during validation");
+  } catch (cause) {
+    throw new Error(`staticRouteExport refuses to overwrite an existing route index: ${target}`, {
+      cause,
+    });
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
 function copyRouteIndex(output: string, route: string, html: Buffer): void {
   const target = path.join(routeDirectory(output, route), "index.html");
-  if (existsSync(target)) {
-    const stat = lstatSync(target);
-    if (stat.isSymbolicLink() || !stat.isFile() || !readFileSync(target).equals(html))
-      throw new Error(`staticRouteExport refuses to overwrite an existing route index: ${target}`);
+  let descriptor: number;
+  try {
+    descriptor = openSync(target, "wx");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    validateExistingIndex(target, html);
     return;
   }
-  writeFileSync(target, html, { flag: "wx" });
+  try {
+    writeFileSync(descriptor, html);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function builtIndex(output: string): Buffer {
+  const index = path.join(output, "index.html");
+  try {
+    return readFileSync(index);
+  } catch (cause) {
+    throw new Error(`staticRouteExport cannot read built index.html: ${index}`, { cause });
+  }
 }
 
 /**
@@ -421,7 +467,6 @@ function copyRouteIndex(output: string, route: string, html: Buffer): void {
 export function staticRouteExport(options: StaticRouteExportOptions = {}): Plugin {
   const routes = declaredRoutes(options.routes ?? []);
   const enabled = options.enabled ?? true;
-  const native = options.native ?? process.env.CAPACITOR === "true";
   let output: string | undefined;
   let written = false;
   return {
@@ -435,6 +480,7 @@ export function staticRouteExport(options: StaticRouteExportOptions = {}): Plugi
     },
     configResolved(config) {
       output = undefined;
+      const native = options.native ?? process.env.CAPACITOR === "true";
       if (
         !enabled ||
         native ||
@@ -453,7 +499,7 @@ export function staticRouteExport(options: StaticRouteExportOptions = {}): Plugi
       sequential: true,
       handler() {
         if (!written || output === undefined) return;
-        const html = readFileSync(path.join(output, "index.html"));
+        const html = builtIndex(output);
         for (const route of routes) copyRouteIndex(output, route, html);
       },
     },
